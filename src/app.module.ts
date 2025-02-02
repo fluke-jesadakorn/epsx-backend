@@ -9,13 +9,15 @@ import { Financial } from './entities/financial.entity';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EventStoreModule } from './modules/event-store/event-store.module';
 import { Event } from './entities/event.entity';
-import { ClientsModule, Transport } from '@nestjs/microservices';
 import { HealthCheckModule } from './modules/health-check/health-check.module';
 import { GatewayModule } from './gateway/gateway.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
+    AuthModule,
+    ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => ({
@@ -37,6 +39,7 @@ import { GatewayModule } from './gateway/gateway.module';
     FinancialModule,
     HealthCheckModule,
     GatewayModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

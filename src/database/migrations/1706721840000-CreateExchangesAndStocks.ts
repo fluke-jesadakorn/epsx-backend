@@ -5,6 +5,10 @@ export class CreateExchangesAndStocks1706721840000 implements MigrationInterface
     // Create uuid-ossp extension if not exists
     await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
 
+    // Drop existing triggers if they exist
+    await queryRunner.query(`DROP TRIGGER IF EXISTS update_exchanges_updated_at ON public.exchanges`);
+    await queryRunner.query(`DROP TRIGGER IF EXISTS update_stocks_updated_at ON public.stocks`);
+
     // Create exchanges table
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS public.exchanges (
@@ -44,7 +48,7 @@ export class CreateExchangesAndStocks1706721840000 implements MigrationInterface
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_stocks_symbol ON public.stocks(symbol)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_stocks_exchange_id ON public.stocks(exchange_id)`);
 
-    // Create updated_at trigger function
+    // Create or replace the update_updated_at_column function
     await queryRunner.query(`
       CREATE OR REPLACE FUNCTION update_updated_at_column()
       RETURNS TRIGGER AS $$
@@ -69,6 +73,15 @@ export class CreateExchangesAndStocks1706721840000 implements MigrationInterface
         FOR EACH ROW
         EXECUTE FUNCTION update_updated_at_column()
     `);
+
+    // Add table comments
+    await queryRunner.query(`
+      COMMENT ON TABLE public.exchanges IS 'Stores information about stock exchanges'
+    `);
+
+    await queryRunner.query(`
+      COMMENT ON TABLE public.stocks IS 'Stores information about individual stocks'
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
@@ -76,16 +89,11 @@ export class CreateExchangesAndStocks1706721840000 implements MigrationInterface
     await queryRunner.query(`DROP TRIGGER IF EXISTS update_stocks_updated_at ON public.stocks`);
     await queryRunner.query(`DROP TRIGGER IF EXISTS update_exchanges_updated_at ON public.exchanges`);
     
-    // Drop function
-    await queryRunner.query(`DROP FUNCTION IF EXISTS update_updated_at_column`);
-    
-    // Drop indexes
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_stocks_exchange_id`);
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_stocks_symbol`);
-    await queryRunner.query(`DROP INDEX IF EXISTS idx_exchanges_market_code`);
-    
     // Drop tables
     await queryRunner.query(`DROP TABLE IF EXISTS public.stocks`);
     await queryRunner.query(`DROP TABLE IF EXISTS public.exchanges`);
+    
+    // Drop function
+    await queryRunner.query(`DROP FUNCTION IF EXISTS update_updated_at_column`);
   }
 }

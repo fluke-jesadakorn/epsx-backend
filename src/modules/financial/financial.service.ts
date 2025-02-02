@@ -3,13 +3,29 @@ import * as dotenv from 'dotenv';
 import { logger } from '../../utils/logger';
 import { DatabaseService } from '../../database/database.service';
 import { Stock } from '../../database/types/database.types';
+import { Financial } from '../../entities/financial.entity';
 
 dotenv.config({ path: '../../.env' });
+
+// Future: Add support for additional financial metrics like revenue, net income, etc.
+interface EPSStockInfo {
+  symbol: string;
+  companyName: string | null;
+  eps: number;
+  epsGrowthPercent: number;
+  reportDate: string;
+}
+
+export interface EPSGrowthResult {
+  current: EPSStockInfo;
+  previous: EPSStockInfo;
+}
 
 interface StockWithMarketCode extends Stock {
   market_code: string;
 }
 
+// Future: Consider making config values configurable via environment variables
 const config = {
   maxConcurrentRequests: 5, // maximum number of stocks to process concurrently
   batchDelay: 0, // delay between pages (if needed)
@@ -223,6 +239,55 @@ export class FinancialService {
   constructor(private readonly db: DatabaseService) {}
 
   /**
+   * Get EPS growth ranking for stocks, sorted by highest growth percentage.
+   * - Analyzes 20 periods of financial data for each stock
+   * - Calculates EPS growth percentage between most recent and 20th period
+   * - Filters out stocks with null/zero EPS values
+   * - Returns sorted array from highest to lowest growth percentage
+   *
+   * @future_enhancement
+   * - Add filtering options (min/max EPS, date range, sectors)
+   * - Add pagination support for large datasets
+   * - Cache results to improve performance
+   * - Add validation for negative EPS values
+   *
+   * @returns Array of stocks with their EPS growth percentages
+   */
+  /**
+   * Get EPS growth ranking for stocks, sorted by highest growth percentage.
+   * - Uses optimized database query with window functions
+   * - Results are cached for 5 minutes
+   * - Handles division by zero and null cases
+   * - Pre-sorted at database level
+   *
+   * @future_enhancement
+   * - Add filtering options (min/max EPS, date range, sectors)
+   * - Add pagination support for large datasets
+   * - Add validation for negative EPS values
+   *
+   * @returns Array of stocks with their EPS growth percentages
+   */
+  async getEPSGrowthRanking(
+    limit: number = 20, 
+    skip: number = 0, 
+  ): Promise<{ data: EPSGrowthResult[], metadata: { total: number, limit: number, skip: number } }> {
+    try {
+      const { data, total } = await this.db.getEPSGrowthRankings(limit, skip);
+      return {
+        data,
+        metadata: {
+          total,
+          limit,
+          skip
+        }
+      };
+    } catch (error) {
+      logger.error('Error calculating EPS growth ranking', error);
+      throw error;
+    }
+  }
+
+  /**
    * Saves processed financial data into the database after filtering out duplicates.
    * Duplicate check now uses a composite key (report_date, fiscal_quarter, fiscal_year).
    */
@@ -245,7 +310,7 @@ export class FinancialService {
       }
 
       // Fetch existing records for the stock.
-      const existingRecords = await this.db.getFinancialsByStockId(stock.id);
+      const existingRecords = await this.db.getFinancialsByStockId(stock.id, 'service_role');
       // Build a Set of composite keys: stock_id|report_date|fiscal_quarter|fiscal_year
       const existingKeys = new Set(
         existingRecords.map(
@@ -323,14 +388,14 @@ export class FinancialService {
    * Processes stocks concurrently: fetching their financial data dynamically and saving
    * new records to the database, with dynamic retry and wait logic.
    */
-  async fetchAndSaveFinancials() {
+  async fetchAndSaveFinancials(userId: string = 'service_role') {
     try {
       let page = 1;
       const pageSize = 100;
       let totalProcessed = 0;
 
       while (true) {
-        const stocks = (await this.db.getAllStocks(page, pageSize)) as Stock[];
+        const stocks = (await this.db.getAllStocks(page, pageSize, userId)) as Stock[];
         if (!stocks.length) {
           if (page === 1) throw new Error('No stocks found in database');
           break; // No more stocks to process

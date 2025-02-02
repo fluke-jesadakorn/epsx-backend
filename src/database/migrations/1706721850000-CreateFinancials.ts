@@ -66,12 +66,21 @@ export class CreateFinancials1706721850000 implements MigrationInterface {
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_financials_report_date ON public.financials(report_date)`);
     await queryRunner.query(`CREATE INDEX IF NOT EXISTS idx_financials_fiscal_year_quarter ON public.financials(fiscal_year, fiscal_quarter)`);
 
+    // Drop existing trigger if exists
+    await queryRunner.query(`DROP TRIGGER IF EXISTS update_financials_updated_at ON public.financials`);
+
     // Create trigger
     await queryRunner.query(`
       CREATE TRIGGER update_financials_updated_at
         BEFORE UPDATE ON public.financials
         FOR EACH ROW
         EXECUTE FUNCTION update_updated_at_column()
+    `);
+
+    // Add composite index for optimizing getAllFinancialsWithStocks query
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS idx_financials_stock_report_date 
+      ON public.financials(stock_id, report_date DESC)
     `);
 
     // Add table comments
