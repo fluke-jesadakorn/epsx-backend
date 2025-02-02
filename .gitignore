@@ -1,0 +1,69 @@
+# Dependency directories
+node_modules/
+dist/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Build output
+/dist
+*.js
+*.js.map
+*.d.ts
+
+# Editor directories and files
+.idea/
+*.swp
+*.swo
+.DS_Store
+.vscode/*
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Debug logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Test coverage
+coverage/
+
+# Playwright browsers
+.playwright/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Temp
+temp/
+
+# Bun
+bun.lockb
+
+# TypeScript build info
+tsconfig.tsbuildinfo
+
+# Vite cache
+.cache/
+.vite/
+
+# Supabase local
+.supabase/
+
+# Playwright test artifacts
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

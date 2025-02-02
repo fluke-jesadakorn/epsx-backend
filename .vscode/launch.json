@@ -1,0 +1,40 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "bun",
+      "request": "launch",
+      "name": "Run Script: index",
+      "program": "index.ts",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    {
+      "type": "bun",
+      "request": "launch",
+      "name": "Run Script: fetch-data",
+      "program": "src/scripts/fetch-data.ts",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    },
+    {
+      "type": "bun",
+      "request": "launch",
+      "name": "Run Script: view-data",
+      "program": "src/scripts/view-data.ts",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NODE_ENV": "development"
+      }
+    }
+    // TODO: Add more launch configurations for:
+    // - Test scripts
+    // - Different environment configurations (staging, production)
+    // - Specific debug scenarios with different environment variables
+    // - Attach configuration for running processes
+  ]
+}
