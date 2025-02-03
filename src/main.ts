@@ -1,3 +1,14 @@
+/**
+ * TODO: Google Cloud Deployment
+ * This application will be deployed to Google Cloud Platform.
+ * Required steps for GCP deployment:
+ * 1. Set up Google Cloud project and enable required APIs
+ * 2. Configure Google Cloud Run or Google Kubernetes Engine (GKE)
+ * 3. Set up Cloud Build for CI/CD
+ * 4. Configure environment variables in Cloud Run/GKE
+ * 5. Update deployment scripts for GCP
+ */
+
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { AppModule } from './app.module';
