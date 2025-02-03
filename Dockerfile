@@ -27,12 +27,6 @@ COPY src/database/datasource.ts ./src/database/datasource.ts
 # Create a directory for file-based storage if needed
 RUN mkdir -p /app/data
 
-# Set environment variables
-ENV NODE_ENV=production \
-    PORT=3000
-
-# Expose the application port
-EXPOSE ${PORT}
 
 # Start the application
 # Note: Environment variables will be injected by Cloud Run at runtime
