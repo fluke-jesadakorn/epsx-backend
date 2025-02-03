@@ -29,7 +29,6 @@ RUN mkdir -p /app/data
 
 # Set environment variables
 ENV NODE_ENV=production
-ENV PORT=3000
 
 # Expose the application port
 EXPOSE 3000
