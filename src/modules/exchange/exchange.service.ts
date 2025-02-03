@@ -74,7 +74,7 @@ export class ExchangeService {
         } catch (error) {
           logger.error(
             `Failed to save exchange ${exchange.market_code}:`,
-            error as Error
+            error
           );
         }
       }
@@ -86,7 +86,7 @@ export class ExchangeService {
       const totalCount = await this.exchangeRepository.count();
       logger.info(`Total exchanges in database: ${totalCount}`);
     } catch (error) {
-      logger.error("Failed to scrape exchanges:", error as Error);
+      logger.error("Failed to scrape exchanges:", error);
       throw error;
     } finally {
       await browser.close();

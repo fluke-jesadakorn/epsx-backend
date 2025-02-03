@@ -28,13 +28,25 @@ COPY src/database/datasource.ts ./src/database/datasource.ts
 RUN mkdir -p /app/data
 
 # Set environment variables
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    PORT=3000
 
 # Expose the application port
-EXPOSE 3000
+EXPOSE ${PORT}
 
 # Start the application
+# Note: Environment variables will be injected by Cloud Run at runtime
 CMD ["bun", "run", "start:prod"]
+
+# Documentation for environment variables
+LABEL org.opencontainers.image.description="Investing Scraping Service\n\
+Required environment variables for deployment:\n\
+- POSTGRES_URL: Database connection string\n\
+\n\
+Optional environment variables:\n\
+- HEADLESS_MODE: Set to 'false' to disable headless mode (default: true)\n\
+- DEBUG_MODE: Set to 'true' to enable debug mode (default: false)\n\
+- DEBUG_SLOW_MO: Slowdown time in ms for debug mode (default: 100)"
 
 # Note: Cloud Run handles its own health checking mechanism via the /health endpoint
 # No container-level HEALTHCHECK needed as Cloud Run will probe the application directly

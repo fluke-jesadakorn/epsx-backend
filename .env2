@@ -1,0 +1,24 @@
+# PostgreSQL Database Configuration (Supabase)
+DB_HOST=localhost
+DB_PORT=54322
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+DB_NAME=postgres
+DB_SSL=false
+
+# Postgres
+POSTGRES_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+
+# Browser Configuration
+HEADLESS_MODE=true
+
+# Debugging Configuration
+DEBUG_MODE=false
+DEBUG_CONSOLE=true
+DEBUG_SCREENSHOTS=true
+DEBUG_DEVTOOLS=false
+
+# Supabase Configuration
+SUPABASE_URL=http://127.0.0.1:54321
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+JWT_SECRET=av31ZRpejwvAJSZvV/EzjcCGYJkvltZ/5x117riFfyoCuZqsua4v6A54XViNfNgSPAm8NlmdU95Sydyp8aHYuA==

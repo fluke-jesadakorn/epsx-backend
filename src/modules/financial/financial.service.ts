@@ -268,19 +268,26 @@ export class FinancialService {
    * @returns Array of stocks with their EPS growth percentages
    */
   async getEPSGrowthRanking(
-    limit: number = 20, 
+    limit: number = 20,
     skip: number = 0,
-    userId: string = 'service_role'
-  ): Promise<{ data: EPSGrowthResult[], metadata: { total: number, limit: number, skip: number } }> {
+    userId: string = 'service_role',
+  ): Promise<{
+    data: EPSGrowthResult[];
+    metadata: { total: number; limit: number; skip: number };
+  }> {
     try {
-      const { data, total } = await this.db.getEPSGrowthRankings(limit, skip, userId);
+      const { data, total } = await this.db.getEPSGrowthRankings(
+        limit,
+        skip,
+        userId,
+      );
       return {
         data,
         metadata: {
           total,
           limit,
-          skip
-        }
+          skip,
+        },
       };
     } catch (error) {
       logger.error('Error calculating EPS growth ranking', error);
@@ -297,7 +304,6 @@ export class FinancialService {
       if (!stock.id) {
         logger.error(
           `Missing stock ID for ${stock.market_code}/${stock.symbol}`,
-          new Error('Missing stock ID'),
         );
         return;
       }
@@ -311,7 +317,10 @@ export class FinancialService {
       }
 
       // Fetch existing records for the stock.
-      const existingRecords = await this.db.getFinancialsByStockId(stock.id, 'service_role');
+      const existingRecords = await this.db.getFinancialsByStockId(
+        stock.id,
+        'service_role',
+      );
       // Build a Set of composite keys: stock_id|report_date|fiscal_quarter|fiscal_year
       const existingKeys = new Set(
         existingRecords.map(
@@ -396,7 +405,11 @@ export class FinancialService {
       let totalProcessed = 0;
 
       while (true) {
-        const stocks = (await this.db.getAllStocks(page, pageSize, userId)) as Stock[];
+        const stocks = (await this.db.getAllStocks(
+          page,
+          pageSize,
+          userId,
+        )) as Stock[];
         if (!stocks.length) {
           if (page === 1) throw new Error('No stocks found in database');
           break; // No more stocks to process

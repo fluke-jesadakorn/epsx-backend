@@ -8,6 +8,18 @@ import { Financial } from '../entities/financial.entity';
 import { Event } from '../entities/event.entity';
 import { LoggerModule } from '../common/logger/logger.module';
 
+/**
+ * Database module that handles database connections and entity management
+ * 
+ * TODO: Future enhancements:
+ * Database Optimization:
+ * - Add connection pooling configuration for better performance
+ * - Add support for read replicas to scale read operations
+ * - Implement database-specific optimizations (indexes, partitioning)
+ * - Add comprehensive database monitoring and logging
+ * - Implement connection retry logic for resilience
+ * - Add support for multiple database connections if needed
+ */
 @Module({
   providers: [DatabaseService],
   imports: [
@@ -24,8 +36,6 @@ import { LoggerModule } from '../common/logger/logger.module';
         entities: [Exchange, Stock, Financial, Event],
         synchronize: false,
         ssl: configService.get('DB_SSL') === 'true',
-        migrations: [__dirname + '/migrations/**/*{.ts,.js}'],
-        migrationsRun: false, // Automatically run migrations on app start
       }),
       inject: [ConfigService],
     }),

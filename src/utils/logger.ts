@@ -1,91 +1,65 @@
-import { Logger } from '../types';
-import { LogsGateway } from '../gateway/logs.gateway';
+import { getAppConfig } from '../config/app.config';
 
-let logsGateway: LogsGateway | null = null;
+const config = getAppConfig();
+const resetColor = '[0m';
 
-export const setLogsGateway = (gateway: LogsGateway) => {
-  logsGateway = gateway;
-};
-
-// TODO: Future enhancements:
-// - Add log levels configuration
-// - Implement log rotation
-// - Add log formatting options
-// - Add log transport abstraction
-// - Add log aggregation support
-// - Implement structured logging
-// - Add log persistence
-// - Add log filtering capabilities
-
-class WebSocketLogger implements Logger {
+class Logger {
   private getTimestamp(): string {
-    return new Date().toISOString();
+    const now = new Date();
+    return now.toISOString();
   }
 
-  private formatMessage(level: string, message: string): string {
-    return `[${this.getTimestamp()}] [${level}] ${message}`;
+  private formatMessage(level: string, message: string | Error, context?: string): string {
+    const timestamp = config.logger.timestamp ? `[${this.getTimestamp()}]` : '';
+    const colorCode = config.logger.colors[level.toLowerCase()] || '';
+    const formattedLevel = `[${level.toUpperCase()}]`;
+    const contextStr = context ? `[${context}] ` : '';
+    
+    let formattedMessage: string;
+    if (message instanceof Error) {
+      formattedMessage = `${message.message}\n${message.stack}`;
+    } else {
+      formattedMessage = message;
+    }
+    
+    return `${timestamp}${colorCode}${formattedLevel} ${contextStr}${formattedMessage}${resetColor}`;
   }
 
-  info(message: string, ...args: any[]): void {
-    console.log(this.formatMessage('INFO', message), ...args);
-    if (logsGateway) {
-      logsGateway.broadcastLog({
-        type: 'info',
-        data: { message, args }
-      });
+  error(message: string | Error, context?: string): void {
+    console.error(this.formatMessage('error', message, context));
+  }
+
+  warn(message: string | Error, context?: string): void {
+    console.warn(this.formatMessage('warn', message, context));
+  }
+
+  info(message: string | Error, context?: string): void {
+    console.info(this.formatMessage('info', message, context));
+  }
+
+  debug(message: string | Error, context?: string): void {
+    if (config.logger.debug) {
+      console.debug(this.formatMessage('debug', message, context));
     }
   }
 
-  error(message: string, error: Error | null): void {
-    const errorData = error ? { name: error.name, message: error.message, stack: error.stack } : {};
-    console.error(this.formatMessage('ERROR', message), errorData);
-    if (logsGateway) {
-      logsGateway.broadcastLog({
-        type: 'error',
-        data: { message, error: errorData }
-      });
-    }
-  }
-
-  warn(message: string, ...args: any[]): void {
-    console.warn(this.formatMessage('WARN', message), ...args);
-    if (logsGateway) {
-      logsGateway.broadcastLog({
-        type: 'warn',
-        data: { message, args }
-      });
-    }
-  }
-
-  debug(message: string, ...args: any[]): void {
-    if (process.env.DEBUG === 'true') {
-      console.debug(this.formatMessage('DEBUG', message), ...args);
-      if (logsGateway) {
-        logsGateway.broadcastLog({
-          type: 'debug',
-          data: { message, args }
-        });
-      }
-    }
+  log(message: string | Error, context?: string): void {
+    this.info(message, context);
   }
 }
 
-// Export a singleton instance
-export const logger = new WebSocketLogger();
+export const logger = new Logger();
 
-// Export utility functions for error handling
-export const handleError = (error: unknown, context: string): Error => {
-  if (error instanceof Error) {
-    logger.error(`Error in ${context}:`, error);
-    return error;
-  }
-  if (typeof error === 'object' && error !== null) {
-    const errorDetails = JSON.stringify(error, null, 2);
-    const wrappedError = new Error(`Unknown error in ${context}: ${errorDetails}`);
-    logger.error(`Error in ${context}:`, wrappedError);
-    return wrappedError;
-  }
-  const wrappedError = new Error(`Unknown error in ${context}: ${String(error)}`);
-  logger.error(`Error in ${context}:`, wrappedError);
-  return wrappedError;
-};
+/**
+ * TODO: Future enhancements:
+ * - Add log rotation support
+ * - Implement log file output
+ * - Add log level filtering
+ * - Support structured logging (JSON format)
+ * - Add request ID tracking
+ * - Implement log aggregation support
+ * - Add performance metrics logging
+ * - Support custom log formatters
+ * - Add log compression
+ * - Implement async logging
+ */

@@ -5,13 +5,19 @@ import axios from 'axios';
 import { logger } from '../../utils/logger';
 import { Stock } from '../../entities/stock.entity';
 import { Exchange } from '../../entities/exchange.entity';
+import { config } from '../../config';
 
-const config = {
-  maxParallelRequests: 10, // Increased parallel requests
-  batchDelay: 500, // Reduced delay between batches
-  stockBatchSize: 100, // Number of stocks to process in parallel
-};
-
+/**
+ * Configuration used by the StockService:
+ * - maxParallelRequests: Number of exchanges to process concurrently
+ * - stockBatchSize: Number of stocks to process in one batch
+ * - batchDelay: Delay between processing batches in milliseconds
+ *
+ * These values can be configured via environment variables:
+ * - STOCK_MAX_PARALLEL_REQUESTS
+ * - STOCK_BATCH_SIZE
+ * - STOCK_BATCH_DELAY
+ */
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -56,7 +62,7 @@ async function fetchStockData(
       if (isLastAttempt) {
         logger.error(
           `Failed to fetch ${market} data after ${retries} attempts`,
-          error instanceof Error ? error : new Error(errorMessage),
+          error,
         );
         return null;
       } else {
@@ -87,23 +93,20 @@ export class StockService {
       for (
         let i = 0;
         i < existingExchanges.length;
-        i += config.maxParallelRequests
+        i += config.app.stock.maxParallelRequests
       ) {
         const batch = existingExchanges.slice(
           i,
-          i + config.maxParallelRequests,
+          i + config.app.stock.maxParallelRequests,
         );
         logger.info(
-          `Processing batch ${Math.floor(i / config.maxParallelRequests) + 1} of ${Math.ceil(existingExchanges.length / config.maxParallelRequests)}`,
+          `Processing batch ${Math.floor(i / config.app.stock.maxParallelRequests) + 1} of ${Math.ceil(existingExchanges.length / config.app.stock.maxParallelRequests)}`,
         );
 
         // Process each exchange in the batch concurrently
         const batchPromises = batch.map(async (e) => {
           if (!e.id) {
-            logger.error(
-              `Exchange ${e.market_code} has no ID`,
-              new Error('Missing exchange ID'),
-            );
+            logger.error(`Exchange ${e.market_code} has no ID`);
             return;
           }
 
@@ -113,10 +116,7 @@ export class StockService {
 
           // Validate stock data
           if (!stockData) {
-            logger.error(
-              `Failed to fetch data for exchange ${e.market_code}`,
-              new Error(`No response received for ${e.market_code}`),
-            );
+            logger.error(`Failed to fetch data for exchange ${e.market_code}`);
             return;
           }
 
@@ -124,7 +124,6 @@ export class StockService {
           if (!stockData.data?.data) {
             logger.error(
               `Invalid data structure received for exchange ${e.market_code}`,
-              new Error('Missing data.data array in response'),
             );
             return;
           }
@@ -141,11 +140,11 @@ export class StockService {
           for (
             let j = 0;
             j < stocksToProcess.length;
-            j += config.stockBatchSize
+            j += config.app.stock.stockBatchSize
           ) {
             const stockBatch = stocksToProcess.slice(
               j,
-              j + config.stockBatchSize,
+              j + config.app.stock.stockBatchSize,
             );
 
             try {
@@ -167,7 +166,10 @@ export class StockService {
               const toInsert: Partial<Stock>[] = [];
 
               // Helper function to compare stock data
-              const hasDataChanged = (existing: Stock, newData: Partial<Stock>): boolean => {
+              const hasDataChanged = (
+                existing: Stock,
+                newData: Partial<Stock>,
+              ): boolean => {
                 return (
                   existing.company_name !== newData.company_name ||
                   existing.market_code !== newData.market_code ||
@@ -205,11 +207,15 @@ export class StockService {
                   // Only update if data has actually changed
                   if (hasDataChanged(existing, stockEntity)) {
                     toUpdate.push({ id: existing.id, data: stockEntity });
-                    logger.debug(`Stock ${stockData.s} data has changed, updating...`);
+                    logger.debug(
+                      `Stock ${stockData.s} data has changed, updating...`,
+                    );
                   }
                 } else {
                   toInsert.push(stockEntity);
-                  logger.debug(`New stock ${stockData.s} found, will be inserted`);
+                  logger.debug(
+                    `New stock ${stockData.s} found, will be inserted`,
+                  );
                 }
               });
 
@@ -238,7 +244,10 @@ export class StockService {
                 error instanceof Error
                   ? error
                   : new Error(JSON.stringify(error));
-              logger.error(`Failed to process stock batch`, formattedError);
+              logger.error(
+                `Failed to process stock batch`,
+                formattedError.message,
+              );
               throw formattedError;
             }
           }
@@ -252,21 +261,21 @@ export class StockService {
         await Promise.all(batchPromises);
 
         // Add delay between batches to prevent rate limiting
-        if (i + config.maxParallelRequests < existingExchanges.length) {
+        if (
+          i + config.app.stock.maxParallelRequests <
+          existingExchanges.length
+        ) {
           logger.info(
-            `Waiting ${config.batchDelay}ms before processing next batch...`,
+            `Waiting ${config.app.stock.batchDelay}ms before processing next batch...`,
           );
-          await sleep(config.batchDelay);
+          await sleep(config.app.stock.batchDelay);
         }
       }
 
       // Log completion of all batches
       logger.info('All batches have been processed successfully.');
     } catch (error) {
-      logger.error(
-        'Fatal error during stock data processing',
-        error instanceof Error ? error : new Error(String(error)),
-      );
+      logger.error('Fatal error during stock data processing');
     }
   }
 }
