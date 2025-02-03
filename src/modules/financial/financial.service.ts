@@ -269,10 +269,11 @@ export class FinancialService {
    */
   async getEPSGrowthRanking(
     limit: number = 20, 
-    skip: number = 0, 
+    skip: number = 0,
+    userId: string = 'service_role'
   ): Promise<{ data: EPSGrowthResult[], metadata: { total: number, limit: number, skip: number } }> {
     try {
-      const { data, total } = await this.db.getEPSGrowthRankings(limit, skip);
+      const { data, total } = await this.db.getEPSGrowthRankings(limit, skip, userId);
       return {
         data,
         metadata: {

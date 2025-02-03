@@ -48,7 +48,7 @@ export class DatabaseService {
   ): Promise<void> {
     try {
       const { data: user, error: userError } = await this.supabase
-        .from('auth.users')
+        .from('users')
         .select('role')
         .eq('id', userId)
         .single();
@@ -90,7 +90,7 @@ export class DatabaseService {
 
   private async getUserRole(userId: string): Promise<UserRole> {
     const { data, error } = await this.supabase
-      .from('auth.users')
+      .from('users')
       .select('role')
       .eq('id', userId)
       .single();
@@ -255,19 +255,18 @@ export class DatabaseService {
   async getEPSGrowthRankings(
     limit: number = 20,
     skip: number = 0,
-    // userId: string,
+    userId: string,
   ): Promise<{ data: any[]; total: number }> {
     try {
       // await this.checkUserPermissions(userId, 'financial_read');
       // const userRole = await this.getUserRole(userId);
 
-      // // Modify the query based on user role
-      // const dateRestriction =
-      //   userRole === 'enterprise'
-      //     ? ''
-      //     : userRole === 'premium'
-      //       ? "AND f.report_date >= NOW() - INTERVAL '1 year'"
-      //       : "AND f.report_date >= NOW() - INTERVAL '3 months'";
+      // Build date restriction based on user role
+      // const dateCondition = userRole === 'enterprise' 
+      //   ? '' 
+      //   : userRole === 'premium'
+      //     ? `AND f.report_date >= NOW() - INTERVAL '1 year'`
+      //     : `AND f.report_date >= NOW() - INTERVAL '3 months'`;
 
       const rawQuery = `
         WITH latest_eps AS (

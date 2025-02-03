@@ -38,6 +38,7 @@ export class FinancialController {
     const skip = skipStr ? Math.max(0, parseInt(skipStr)) : 0;
     console.log(req.cookies);
 
-    return await this.financialService.getEPSGrowthRanking(limit, skip);
+    const userId = (req as AuthenticatedRequest).user?.id || 'service_role';
+    return await this.financialService.getEPSGrowthRanking(limit, skip, userId);
   }
 }
