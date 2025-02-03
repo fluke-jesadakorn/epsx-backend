@@ -34,9 +34,8 @@ ENV PORT=3000
 # Expose the application port
 EXPOSE 3000
 
-# Health check to verify container readiness
-HEALTHCHECK --interval=30s --timeout=3s \
-    CMD curl -f http://localhost:3000/health || exit 1
-
 # Start the application
-CMD ["bun", "run", "dist/main.js"]
+CMD ["bun", "run", "start"]
+
+# Note: Cloud Run handles its own health checking mechanism via the /health endpoint
+# No container-level HEALTHCHECK needed as Cloud Run will probe the application directly

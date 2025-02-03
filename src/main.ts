@@ -36,7 +36,10 @@ async function bootstrap() {
   });
 
   const configService = app.get(ConfigService);
-  const port = configService.get('PORT') || 3000;
+  const port = process.env.PORT || configService.get('PORT') || 3000;
+
+  // Configure hostname for container environments
+  const hostname = '0.0.0.0';
 
   // Swagger configuration
   const config = new DocumentBuilder()
@@ -51,8 +54,8 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, document);
 
   // await app.startAllMicroservices();
-  await app.listen(port, () =>
-    console.log(`Server is running on port ${port}`),
+  await app.listen(port, hostname, () =>
+    console.log(`Server is running on ${hostname}:${port}`),
   );
 
   console.log(`Swagger is running on http://localhost:${port}/docs`);
