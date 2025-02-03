@@ -4,21 +4,21 @@
 
 # Dependencies
 node_modules
-bun.lockb
 
 # Environment files
 .env
-.env.*
 
-# Development files
-test
+# Test files
 test-results
 **/*.spec.ts
 **/*.test.ts
-.eslintrc
-.prettierrc
+
+# Documentation and config files
 README.md
 changelog.md
+
+# Data directory
+data/
 
 # Build output
 dist

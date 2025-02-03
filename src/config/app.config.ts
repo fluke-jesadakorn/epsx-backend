@@ -39,7 +39,7 @@ export interface AppConfig {
 }
 
 export const getAppConfig = (): AppConfig => {
-  const port = Number(process.env.PORT);
+  const port = Number(process.env.PORT) || 3000;
 
   return {
     port,
