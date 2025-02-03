@@ -55,7 +55,9 @@ export const getAppConfig = (): AppConfig => {
       path: 'docs',
       config: new DocumentBuilder()
         .setTitle('Investing Scrape Data API')
-        .setDescription('API documentation for the Investing Scrape Data application')
+        .setDescription(
+          'API documentation for the Investing Scrape Data application',
+        )
         .setVersion('1.0')
         .addTag('investing')
         .build(),
@@ -71,7 +73,9 @@ export const getAppConfig = (): AppConfig => {
       logging: process.env.DB_LOGGING === 'true',
       ssl: process.env.DB_SSL === 'true',
       entities: [join(__dirname, '..', 'entities', '*.entity.{ts,js}')],
-      migrations: [join(__dirname, '..', 'database', 'migrations', '*.{ts,js}')],
+      migrations: [
+        join(__dirname, '..', 'database', 'migrations', '*.{ts,js}'),
+      ],
     },
     logger: {
       level: process.env.LOG_LEVEL || 'info',
@@ -105,7 +109,7 @@ export const getAppConfig = (): AppConfig => {
  * - Implement metrics endpoint configuration
  * - Add documentation customization options
  * - Implement caching configuration
- * 
+ *
  * Stock Service Configuration:
  * - Add retry configuration for failed requests
  * - Implement dynamic batch sizing based on load
