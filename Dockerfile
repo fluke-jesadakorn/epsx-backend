@@ -35,7 +35,7 @@ ENV PORT=3000
 EXPOSE 3000
 
 # Start the application
-CMD ["bun", "run", "start"]
+CMD ["bun", "run", "start:prod"]
 
 # Note: Cloud Run handles its own health checking mechanism via the /health endpoint
 # No container-level HEALTHCHECK needed as Cloud Run will probe the application directly
