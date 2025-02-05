@@ -11,22 +11,11 @@ if (process.env.NODE_ENV !== 'production') {
 
 // Environment validation
 function validateEnvironment(): void {
-  const requiredEnvVars = [
-    'DB_HOST',
-    'DB_PORT',
-    'DB_USERNAME',
-    'DB_PASSWORD',
-    'DB_NAME',
-  ];
-  const missingEnvVars = requiredEnvVars.filter(
-    (envVar) => !process.env[envVar],
-  );
-
-  if (missingEnvVars.length > 0) {
+  if (!process.env.MONGODB_URL) {
     throw new Error(
-      `Missing required environment variables: ${missingEnvVars.join(', ')}\n` +
-        'For local development: Add these to your .env file\n' +
-        'For production: Configure these in your environment',
+      'Missing required environment variable: MONGODB_URL\n' +
+        'For local development: Add MONGODB_URL to your .env file\n' +
+        'For production: Configure MONGODB_URL in your environment',
     );
   }
 }

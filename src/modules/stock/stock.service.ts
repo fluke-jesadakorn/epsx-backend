@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import axios from 'axios';
+import { HttpService } from '../../common/http/http.service';
+import { StockScreenerResponse } from '../../types/stock-analysis.types';
 import { logger } from '../../utils/logger';
-import { Stock } from '../../entities/stock.entity';
-import { Exchange } from '../../entities/exchange.entity';
+import { Stock } from '../../database/entities/stock.entity';
+import { Exchange } from '../../database/entities/exchange.entity';
 import { config } from '../../config';
 
 /**
@@ -33,48 +34,9 @@ async function sleep(ms: number): Promise<void> {
 // 8. Implement data versioning to track historical changes in stock information
 // 9. Add data validation rules specific to each exchange's format
 // 10. Consider implementing soft delete for stock entries
-
-async function fetchStockData(
-  { market }: { market: string },
-  retries = 3,
-): Promise<any> {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      // Special case for NASDAQ which uses a different endpoint structure
-      const endpoint = market === 'NASDAQ' ? 's' : 'a';
-      const filterParam = market === 'NASDAQ' ? 'exchange' : 'exchangeCode';
-
-      const response = await axios.get(
-        `https://api.stockanalysis.com/api/screener/${endpoint}/f?m=marketCap&s=desc&c=s,n&f=${filterParam}-is-${market}`,
-        { timeout: 10000 }, // 10 second timeout
-      );
-
-      if (response.status !== 200) {
-        throw new Error(`Failed to fetch data: ${response.statusText}`);
-      }
-
-      return response.data;
-    } catch (error) {
-      const isLastAttempt = attempt === retries;
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-
-      if (isLastAttempt) {
-        logger.error(
-          `Failed to fetch ${market} data after ${retries} attempts`,
-          error,
-        );
-        return null;
-      } else {
-        logger.warn(
-          `Attempt ${attempt}/${retries} failed for ${market}: ${errorMessage}, retrying...`,
-        );
-        await sleep(1000 * attempt); // Exponential backoff
-      }
-    }
-  }
-  return null;
-}
+// 11. Review and improve error handling for edge cases in stock data processing
+// 12. Consider implementing batch retry mechanism for failed updates
+// 13. Add support for handling multiple primary exchanges per stock
 
 @Injectable()
 export class StockService {
@@ -83,6 +45,7 @@ export class StockService {
     private stockRepository: Repository<Stock>,
     @InjectRepository(Exchange)
     private exchangeRepository: Repository<Exchange>,
+    private readonly httpService: HttpService,
   ) {}
 
   async saveStockData() {
@@ -105,14 +68,15 @@ export class StockService {
 
         // Process each exchange in the batch concurrently
         const batchPromises = batch.map(async (e) => {
-          if (!e.id) {
+          if (!e._id) {
             logger.error(`Exchange ${e.market_code} has no ID`);
             return;
           }
 
-          const stockData = await fetchStockData({
-            market: e.market_code,
-          });
+          const stockData =
+            await this.httpService.fetchStockScreener<StockScreenerResponse>(
+              e.market_code,
+            );
 
           // Validate stock data
           if (!stockData) {
@@ -153,17 +117,12 @@ export class StockService {
               const existingStocks = await this.stockRepository.find({
                 where: {
                   symbol: In(symbols),
-                  exchange_id: e.id,
                 },
               });
 
               const existingStockMap = new Map(
                 existingStocks.map((stock) => [stock.symbol, stock]),
               );
-
-              // Prepare bulk operations
-              const toUpdate: { id: string; data: Partial<Stock> }[] = [];
-              const toInsert: Partial<Stock>[] = [];
 
               // Helper function to compare stock data
               const hasDataChanged = (
@@ -172,14 +131,13 @@ export class StockService {
               ): boolean => {
                 return (
                   existing.company_name !== newData.company_name ||
-                  existing.market_code !== newData.market_code ||
-                  existing.exchange_name !== newData.exchange_name ||
-                  existing.country !== newData.country ||
-                  existing.currency !== newData.currency ||
-                  existing.stocks !== newData.stocks ||
-                  existing.exchange_url !== newData.exchange_url
+                  existing.primary_exchange_market_code !== newData.primary_exchange_market_code ||
+                  JSON.stringify(existing.exchanges) !== JSON.stringify(newData.exchanges)
                 );
               };
+
+              const toUpdate: Stock[] = [];
+              const toInsert: Partial<Stock>[] = [];
 
               stockBatch.forEach((stockData: any) => {
                 if (!stockData.s || !stockData.n) {
@@ -193,20 +151,16 @@ export class StockService {
                 const stockEntity: Partial<Stock> = {
                   symbol: stockData.s,
                   company_name: stockData.n,
-                  exchange_id: e.id,
-                  market_code: e.market_code,
-                  exchange_name: e.exchange_name,
-                  country: e.country,
-                  currency: e.currency,
-                  stocks: e.stocks,
-                  exchange_url: e.exchange_url,
+                  primary_exchange_market_code: e.market_code,
+                  exchanges: [{ market_code: e.market_code, primary: true }],
                 };
 
                 const existing = existingStockMap.get(stockData.s);
-                if (existing?.id) {
+                if (existing) {
                   // Only update if data has actually changed
                   if (hasDataChanged(existing, stockEntity)) {
-                    toUpdate.push({ id: existing.id, data: stockEntity });
+                    Object.assign(existing, stockEntity);
+                    toUpdate.push(existing);
                     logger.debug(
                       `Stock ${stockData.s} data has changed, updating...`,
                     );
@@ -221,19 +175,11 @@ export class StockService {
 
               // Perform bulk operations
               if (toInsert.length > 0) {
-                await this.stockRepository
-                  .createQueryBuilder()
-                  .insert()
-                  .values(toInsert)
-                  .execute();
+                await this.stockRepository.save(toInsert);
               }
 
               if (toUpdate.length > 0) {
-                await Promise.all(
-                  toUpdate.map(({ id, data }) =>
-                    this.stockRepository.update(id, data),
-                  ),
-                );
+                await this.stockRepository.save(toUpdate);
               }
 
               processedCount += stockBatch.length;
@@ -253,7 +199,7 @@ export class StockService {
           }
 
           logger.info(
-            `Exchange ${e.exchange_name} processing completed. Processed ${processedCount} stocks.`,
+            `Exchange ${e.name} processing completed. Processed ${processedCount} stocks.`,
           );
         });
 

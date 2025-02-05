@@ -1,3 +1,5 @@
+import 'reflect-metadata';
+
 /**
  * TODO: Google Cloud Deployment
  * This application will be deployed to Google Cloud Platform.
@@ -13,11 +15,18 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { ValidationPipe } from '@nestjs/common';
 import { getAppConfig } from './config/app.config';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = getAppConfig();
+
+  // Enable validation and transformation
+  app.useGlobalPipes(new ValidationPipe({
+    transform: true,
+    whitelist: true,
+  }));
   
   // Configure CORS
   app.enableCors(config.cors);

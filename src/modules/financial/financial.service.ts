@@ -1,480 +1,210 @@
 import { Injectable } from '@nestjs/common';
-import * as dotenv from 'dotenv';
+import { PaginatedResponse, EPSGrowthResult } from '../../types';
+import { FetchStateService } from './services/fetch-state.service';
+import { FinancialFetchService } from './services/financial-fetch.service';
+import { FinancialDataService } from './services/financial-data.service';
+import { WorkerPoolService } from './services/worker-pool.service';
 import { logger } from '../../utils/logger';
-import { DatabaseService } from '../../database/database.service';
-import { Stock } from '../../database/types/database.types';
-import { Financial } from '../../entities/financial.entity';
 
-dotenv.config({ path: '../../.env' });
-
-// Future: Add support for additional financial metrics like revenue, net income, etc.
-interface EPSStockInfo {
-  symbol: string;
-  companyName: string | null;
-  eps: number;
-  epsGrowthPercent: number;
-  reportDate: string;
-}
-
-export interface EPSGrowthResult {
-  current: EPSStockInfo;
-  previous: EPSStockInfo;
-}
-
-interface StockWithMarketCode extends Stock {
-  market_code: string;
-}
-
-// Future: Consider making config values configurable via environment variables
 const config = {
-  maxConcurrentRequests: 5, // maximum number of stocks to process concurrently
-  batchDelay: 0, // delay between pages (if needed)
-  maxRetries: 3,
-  retryDelay: 5000, // base delay (ms) for retrying; will be scaled exponentially
+  maxConcurrentRequests: 5,
+  batchDelay: 0,
+  pageSize: 100,
 };
-
-async function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Fetches financial data from the remote URL with dynamic retry and exponential backoff.
- */
-async function fetchFinancialData(
-  stock: StockWithMarketCode,
-  retryCount = 0,
-): Promise<any | null> {
-  const url = `https://stockanalysis.com/quote/${stock.symbol}/financials/__data.json?p=quarterly&x-sveltekit-trailing-slash=1&x-sveltekit-invalidated=001`;
-  logger.info(`Fetching data from: ${url}`);
-
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-        'X-Source': 'Cloudflare-Workers',
-      },
-    });
-
-    if (response.status === 429 && retryCount < config.maxRetries) {
-      const dynamicDelay = config.retryDelay * Math.pow(2, retryCount);
-      logger.warn(
-        `Rate limited for ${stock.symbol}, retrying in ${dynamicDelay}ms...`,
-      );
-      await sleep(dynamicDelay);
-      return fetchFinancialData(stock, retryCount + 1);
-    }
-
-    if (!response.ok) {
-      logger.warn(
-        `Failed to fetch data for ${stock.market_code}/${stock.symbol}: ${response.statusText}`,
-      );
-      return null;
-    }
-
-    return await response.json();
-  } catch (error) {
-    logger.error(`Error fetching financial data for ${stock.symbol}`, error);
-    if (retryCount < config.maxRetries) {
-      const dynamicDelay = config.retryDelay * Math.pow(2, retryCount);
-      logger.warn(
-        `Retrying fetch for ${stock.symbol} in ${dynamicDelay}ms (attempt ${retryCount + 1})...`,
-      );
-      await sleep(dynamicDelay);
-      return fetchFinancialData(stock, retryCount + 1);
-    } else {
-      return null;
-    }
-  }
-}
-
-/**
- * Processes dynamic financial data using the dynamic key mapping logic.
- */
-function processDynamicFinancialData(financialData: any): any[] {
-  if (!financialData.nodes || financialData.nodes.length < 3) {
-    logger.warn('Invalid dynamic financial data structure: missing nodes.');
-    return [];
-  }
-  const d = financialData.nodes[2].data;
-  if (!d || !Array.isArray(d)) {
-    logger.warn(
-      'Invalid dynamic financial data structure: missing data array.',
-    );
-    return [];
-  }
-  const financialIndex = d[0]?.financialData;
-  if (typeof financialIndex !== 'number') {
-    logger.warn(
-      'Invalid dynamic financial data structure: missing financialData index.',
-    );
-    return [];
-  }
-  const f = d[financialIndex];
-  if (!f || typeof f !== 'object') {
-    logger.warn(
-      'Invalid dynamic financial data structure: missing mapping object.',
-    );
-    return [];
-  }
-  const keys = Object.keys(f);
-  if (keys.length === 0) {
-    logger.warn(
-      'Invalid dynamic financial data structure: mapping object has no keys.',
-    );
-    return [];
-  }
-  const dataMap = keys.reduce(
-    (acc, key) => {
-      const arr = d[f[key]];
-      if (!Array.isArray(arr)) {
-        logger.warn(
-          `Expected array at d[f[${key}]] but got undefined or non-array.`,
-        );
-        acc[key] = [];
-      } else {
-        acc[key] = arr.map((idx: number) => d[idx]);
-      }
-      return acc;
-    },
-    {} as Record<string, any[]>,
-  );
-
-  const numEntries = dataMap[keys[0]]?.length || 0;
-  if (numEntries === 0) {
-    logger.warn('No entries found in dynamic financial data.');
-    return [];
-  }
-
-  return Array.from({ length: numEntries }, (_, i) => {
-    const entry: Record<string, any> = {};
-    keys.forEach((key) => {
-      // Convert fiscalYear to a number if needed.
-      entry[key] = key === 'fiscalYear' ? +dataMap[key][i] : dataMap[key][i];
-    });
-    return entry;
-  });
-}
-
-/**
- * Processes the incoming financial data—using dynamic logic when available,
- * and falling back to legacy mapping otherwise.
- */
-function processFinancialData(
-  stock: StockWithMarketCode,
-  financialData: any,
-): any[] {
-  // Use dynamic processor if data contains nodes.
-  if (financialData && financialData.nodes) {
-    const combinedList = processDynamicFinancialData(financialData);
-    if (!combinedList.length) {
-      logger.warn(
-        `Dynamic processing returned no data for ${stock.market_code}/${stock.symbol}`,
-      );
-      return [];
-    }
-    // Map dynamic keys to your desired entity structure.
-    return combinedList.map((item: any) => ({
-      stock_id: stock.id,
-      report_date: new Date(item.datekey),
-      fiscal_quarter: item.fiscalQuarter
-        ? parseInt(item.fiscalQuarter.replace(/\D/g, ''), 10)
-        : null,
-      fiscal_year: item.fiscalYear ? Number(item.fiscalYear) : null,
-      revenue: item.revenue ?? null,
-      revenue_growth: item.revenueGrowth ?? null,
-      cost_of_revenue: item.cor ?? null,
-      gross_profit: item.gp ?? null,
-      operating_expenses: item.opex ?? null,
-      operating_income: item.opinc ?? null,
-      interest_expense: item.interestExpense ?? null,
-      net_income: item.netinc ?? null,
-      eps_basic: item.epsBasic ?? null,
-      eps_diluted: item.epsdil ?? null,
-      free_cash_flow: item.fcf ?? null,
-      profit_margin: item.profitMargin ?? null,
-    }));
-  }
-
-  // Fallback legacy processing.
-  if (!financialData || financialData.length === 0) {
-    logger.warn(
-      `Invalid financial data for ${stock.market_code}/${stock.symbol}`,
-    );
-    return [];
-  }
-  return financialData
-    .map((item: any) => {
-      if (!item.periodEnding) {
-        logger.warn(
-          `Missing report date for stock ${stock.market_code}/${stock.symbol}, skipping record`,
-        );
-        return null;
-      }
-      return {
-        stock_id: stock.id,
-        report_date: new Date(item.periodEnding),
-        fiscal_quarter: item.fiscalQuarter
-          ? parseInt(item.fiscalQuarter.replace(/\D/g, ''), 10)
-          : null,
-        fiscal_year: item.fiscalYear ? Number(item.fiscalYear) : null,
-        revenue: item.revenue ?? null,
-        revenue_growth: item.revenueGrowth ?? null,
-        cost_of_revenue: item.cor ?? null,
-        gross_profit: item.gp ?? null,
-        operating_expenses: item.opex ?? null,
-        operating_income: item.opinc ?? null,
-        interest_expense: item.interestExpense ?? null,
-        net_income: item.netinc ?? null,
-        eps_basic: item.epsBasic ?? null,
-        eps_diluted: item.epsdil ?? null,
-        free_cash_flow: item.fcf ?? null,
-        profit_margin: item.profitMargin ?? null,
-      };
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null);
-}
 
 @Injectable()
 export class FinancialService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly fetchState: FetchStateService,
+    private readonly financialData: FinancialDataService,
+    private readonly financialFetch: FinancialFetchService,
+    private readonly workerPool: WorkerPoolService,
+  ) {}
 
-  /**
-   * Get EPS growth ranking for stocks, sorted by highest growth percentage.
-   * - Analyzes 20 periods of financial data for each stock
-   * - Calculates EPS growth percentage between most recent and 20th period
-   * - Filters out stocks with null/zero EPS values
-   * - Returns sorted array from highest to lowest growth percentage
-   *
-   * @future_enhancement
-   * - Add filtering options (min/max EPS, date range, sectors)
-   * - Add pagination support for large datasets
-   * - Cache results to improve performance
-   * - Add validation for negative EPS values
-   *
-   * @returns Array of stocks with their EPS growth percentages
-   */
-  /**
-   * Get EPS growth ranking for stocks, sorted by highest growth percentage.
-   * - Uses optimized database query with window functions
-   * - Results are cached for 5 minutes
-   * - Handles division by zero and null cases
-   * - Pre-sorted at database level
-   *
-   * @future_enhancement
-   * - Add filtering options (min/max EPS, date range, sectors)
-   * - Add pagination support for large datasets
-   * - Add validation for negative EPS values
-   *
-   * @returns Array of stocks with their EPS growth percentages
-   */
   async getEPSGrowthRanking(
-    limit: number = 20,
-    skip: number = 0,
-    userId: string = 'service_role',
-  ): Promise<{
-    data: EPSGrowthResult[];
-    metadata: { total: number; limit: number; skip: number };
-  }> {
-    try {
-      const { data, total } = await this.db.getEPSGrowthRankings(
-        limit,
-        skip,
-        userId,
-      );
+    limit: number,
+    skip: number,
+  ): Promise<PaginatedResponse<EPSGrowthResult>> {
+    // Get all symbols
+    const allSymbols = await this.financialData.getAllSymbols();
+
+    // Get EPS growth data for all symbols
+    const epsData = await this.financialData.getEPSGrowthData(allSymbols);
+
+    // Filter out stocks with no financial data (optional, based on requirements)
+    const validData = epsData.filter((item) => item.has_financial_data);
+
+    if (validData.length === 0) {
       return {
-        data,
+        data: [],
         metadata: {
-          total,
+          total: 0,
           limit,
           skip,
+          message:
+            'No financial data available. Try running /financial/scrape first to fetch data.',
         },
       };
-    } catch (error) {
-      logger.error('Error calculating EPS growth ranking', error);
-      throw error;
     }
+
+    // Sort by EPS growth in descending order
+    const sorted = validData.sort((a, b) => b.eps_growth - a.eps_growth);
+
+    // Add ranking
+    const ranked = sorted.map((item, index) => ({
+      symbol: item.symbol,
+      eps_growth: item.eps_growth,
+      rank: index + 1,
+      last_report_date: item.last_report_date,
+    }));
+
+    // Apply pagination
+    const paginated = ranked.slice(skip, skip + limit);
+
+    // Return properly formatted PaginatedResponse
+    const response: PaginatedResponse<EPSGrowthResult> = {
+      data: paginated,
+      metadata: {
+        total: ranked.length,
+        limit,
+        skip,
+      },
+    };
+
+    return response;
   }
 
-  /**
-   * Saves processed financial data into the database after filtering out duplicates.
-   * Duplicate check now uses a composite key (report_date, fiscal_quarter, fiscal_year).
-   */
-  async saveFinancialData(financialData: any, stock: StockWithMarketCode) {
+  async fetchAndSaveFinancials() {
     try {
-      if (!stock.id) {
-        logger.error(
-          `Missing stock ID for ${stock.market_code}/${stock.symbol}`,
-        );
-        return;
-      }
-
-      const processedFinancials = processFinancialData(stock, financialData);
-      if (!processedFinancials.length) {
-        logger.warn(
-          `No valid financial records to save for ${stock.market_code}/${stock.symbol}`,
-        );
-        return;
-      }
-
-      // Fetch existing records for the stock.
-      const existingRecords = await this.db.getFinancialsByStockId(
-        stock.id,
-        'service_role',
-      );
-      // Build a Set of composite keys: stock_id|report_date|fiscal_quarter|fiscal_year
-      const existingKeys = new Set(
-        existingRecords.map(
-          (rec: any) =>
-            `${rec.stock_id}|${new Date(rec.report_date).toISOString()}|${rec.fiscal_quarter}|${rec.fiscal_year}`,
-        ),
-      );
-
-      // Validate and filter records
-      const newRecords = processedFinancials
-        .filter((fin) => {
-          // Validate fiscal data
-          const isValidFiscalQuarter =
-            fin.fiscal_quarter === null ||
-            (Number.isInteger(fin.fiscal_quarter) &&
-              fin.fiscal_quarter >= 1 &&
-              fin.fiscal_quarter <= 4);
-          const isValidFiscalYear =
-            fin.fiscal_year === null ||
-            (Number.isInteger(fin.fiscal_year) &&
-              fin.fiscal_year > 1900 &&
-              fin.fiscal_year <= new Date().getFullYear());
-
-          if (!isValidFiscalQuarter || !isValidFiscalYear) {
-            if (fin.fiscal_quarter !== null || fin.fiscal_year !== null) {
-              logger.warn(
-                `Invalid fiscal data for ${stock.market_code}/${stock.symbol}: Q${fin.fiscal_quarter ?? '?'} ${fin.fiscal_year ?? '???'}`,
-              );
-            }
-            return false;
-          }
-
-          // Check for duplicates using composite key
-          const key = `${fin.stock_id}|${new Date(fin.report_date).toISOString()}|${fin.fiscal_quarter}|${fin.fiscal_year}`;
-          return !existingKeys.has(key);
-        })
-        .map((fin) => ({
-          stock_id: stock.id,
-          report_date: fin.report_date,
-          fiscal_quarter: fin.fiscal_quarter,
-          fiscal_year: fin.fiscal_year,
-          revenue: fin.revenue,
-          revenue_growth: fin.revenue_growth,
-          operating_income: fin.operating_income,
-          interest_expense: fin.interest_expense,
-          net_income: fin.net_income,
-          eps_basic: fin.eps_basic,
-          eps_diluted: fin.eps_diluted,
-          free_cash_flow: fin.free_cash_flow,
-          profit_margin: fin.profit_margin,
-          total_operating_expenses: fin.operating_expenses,
-        }));
-
-      if (newRecords.length) {
-        await this.db.upsertFinancials(newRecords);
-        newRecords.forEach((rec) =>
-          logger.info(
-            `Saved financial record for ${stock.market_code}/${stock.symbol} on ${rec.report_date}`,
-          ),
-        );
-      } else {
-        logger.info(
-          `Financial records already exist for ${stock.market_code}/${stock.symbol}`,
-        );
-      }
-    } catch (error) {
-      logger.error(
-        `Error saving financial data for ${stock.market_code}/${stock.symbol}`,
-        error,
-      );
-    }
-  }
-
-  /**
-   * Processes stocks concurrently: fetching their financial data dynamically and saving
-   * new records to the database, with dynamic retry and wait logic.
-   */
-  async fetchAndSaveFinancials(userId: string = 'service_role') {
-    try {
-      let page = 1;
-      const pageSize = 100;
-      let totalProcessed = 0;
+      let state = await this.fetchState.loadState();
+      let { currentPage, totalProcessed, lastProcessedStock } = state;
+      let consecutiveErrors = 0;
+      const MAX_CONSECUTIVE_ERRORS = 3;
 
       while (true) {
-        const stocks = (await this.db.getAllStocks(
-          page,
-          pageSize,
-          userId,
-        )) as Stock[];
-        if (!stocks.length) {
-          if (page === 1) throw new Error('No stocks found in database');
-          break; // No more stocks to process
-        }
-
-        logger.info(
-          `Processing page ${page} with ${stocks.length} stocks (Total processed so far: ${totalProcessed})`,
-        );
-
-        const stocksWithMarketCode: StockWithMarketCode[] = stocks.map(
-          (stock) => ({
-            ...stock,
-            market_code: stock.exchanges?.market_code || 'stocks',
-          }),
-        );
-
-        let index = 0;
-        let pageProcessed = 0;
-        const processStock = async (stock: StockWithMarketCode) => {
-          try {
-            const financialData = await fetchFinancialData(stock);
-            if (financialData) {
-              await this.saveFinancialData(financialData, stock);
-              pageProcessed++;
-            }
-          } catch (error) {
-            logger.error(`Error processing ${stock.symbol}`, error);
+        try {
+          const stocks = await this.financialData.getStocksBatch(
+            currentPage,
+            config.pageSize,
+          );
+          if (!stocks.length) {
+            if (currentPage === 1)
+              throw new Error('No stocks found in database');
+            break;
           }
-        };
 
-        // Define a worker that will keep pulling stocks until none remain
-        const worker = async () => {
-          while (index < stocksWithMarketCode.length) {
-            const currentIndex = index;
-            index++;
-            const stock = stocksWithMarketCode[currentIndex];
-            await processStock(stock);
+          logger.info(
+            `Processing page ${currentPage} with ${stocks.length} stocks (Total processed so far: ${totalProcessed})`,
+          );
+
+          const processingStart = Date.now();
+          const pageProcessed = await this.workerPool.processStocksBatch(
+            stocks,
+            lastProcessedStock,
+            {
+              maxConcurrentRequests: config.maxConcurrentRequests,
+              batchDelay: config.batchDelay,
+            },
+          );
+
+          const processingTime = Date.now() - processingStart;
+          totalProcessed += pageProcessed;
+          consecutiveErrors = 0; // Reset error counter on success
+
+          logger.info(
+            `Page ${currentPage} completed in ${processingTime}ms. Successfully processed ${pageProcessed}/${stocks.length} stocks.`,
+          );
+
+          // Update state with progress
+          state = {
+            currentPage: currentPage + 1,
+            totalProcessed,
+            lastProcessedStock: null,
+            lastUpdated: new Date().toISOString(),
+          };
+          await this.fetchState.saveState(state);
+          currentPage++;
+
+          // Adaptive delay based on processing time and success rate
+          const successRate = pageProcessed / stocks.length;
+          const adaptiveDelay = this.calculateAdaptiveDelay(
+            successRate,
+            processingTime,
+          );
+
+          if (adaptiveDelay > 0) {
+            logger.info(
+              `Waiting ${adaptiveDelay}ms before next page (Success rate: ${(successRate * 100).toFixed(1)}%)...`,
+            );
+            await WorkerPoolService.sleep(adaptiveDelay);
           }
-        };
+        } catch (error) {
+          consecutiveErrors++;
+          logger.error(`Error processing page ${currentPage}`, error);
 
-        // Launch a pool of concurrent workers
-        const workers: Promise<void>[] = [];
-        for (let i = 0; i < config.maxConcurrentRequests; i++) {
-          workers.push(worker());
-        }
-        await Promise.all(workers);
+          if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            throw new Error(
+              `Stopping due to ${MAX_CONSECUTIVE_ERRORS} consecutive page processing failures`,
+            );
+          }
 
-        totalProcessed += pageProcessed;
-        logger.info(
-          `Page ${page} completed. Successfully processed ${pageProcessed} stocks in this page.`,
-        );
-        page++; // Move to next page
-
-        if (config.batchDelay > 0) {
-          logger.info(`Waiting ${config.batchDelay}ms before next page...`);
-          await sleep(config.batchDelay);
+          // Exponential backoff for page retries
+          const retryDelay = Math.min(
+            1000 * Math.pow(2, consecutiveErrors),
+            30000,
+          );
+          logger.warn(
+            `Retrying page ${currentPage} after ${retryDelay}ms delay...`,
+          );
+          await WorkerPoolService.sleep(retryDelay);
         }
       }
 
       logger.info(
         `Financial data processing completed. Total stocks processed: ${totalProcessed}`,
       );
+
+      await this.fetchState.clearState();
     } catch (error) {
       logger.error('Fatal error during financial data processing', error);
+      throw error; // Re-throw to allow proper error handling by caller
     }
   }
+
+  private calculateAdaptiveDelay(
+    successRate: number,
+    processingTime: number,
+  ): number {
+    // Base delay from config
+    let delay = config.batchDelay;
+
+    // Adjust delay based on success rate
+    if (successRate < 0.5) {
+      // Increase delay significantly if success rate is low
+      delay *= 3;
+    } else if (successRate < 0.8) {
+      // Moderate increase for moderate success rate
+      delay *= 2;
+    } else if (successRate > 0.95) {
+      // Reduce delay if success rate is very high
+      delay = Math.max(delay * 0.8, 0);
+    }
+
+    // Consider processing time
+    const minProcessingBuffer = 500; // Minimum 500ms between batches
+    return Math.max(delay, processingTime * 0.2 + minProcessingBuffer);
+  }
 }
+
+// TODO: Implement retry mechanism for failed stock processing
+// TODO: Add support for type validation for dynamic financial data fields
+// TODO: Consider caching processed financial data to improve performance
+// TODO: Add support for different data sources (e.g., Yahoo Finance, Bloomberg)
+// TODO: Implement rate limiting based on API provider's restrictions
+// TODO: Add support for historical data fetching
+// TODO: Implement data validation and sanitization
+// TODO: Add support for different financial instruments (bonds, ETFs, etc.)
+// TODO: Implement progress tracking and reporting
+// TODO: Add support for parallel processing across multiple servers
+// TODO: Implement data caching to reduce API calls
+// TODO: Add support for custom user configurations

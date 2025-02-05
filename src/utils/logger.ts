@@ -1,7 +1,6 @@
 import { getAppConfig } from '../config/app.config';
 
 const config = getAppConfig();
-const resetColor = '[0m';
 
 class Logger {
   private getTimestamp(): string {
@@ -22,7 +21,7 @@ class Logger {
       formattedMessage = message;
     }
     
-    return `${timestamp}${colorCode}${formattedLevel} ${contextStr}${formattedMessage}${resetColor}`;
+    return `${timestamp}${colorCode}${formattedLevel} ${contextStr}${formattedMessage}`;
   }
 
   error(message: string | Error, context?: string): void {

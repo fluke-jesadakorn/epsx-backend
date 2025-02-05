@@ -1,3 +1,5 @@
+export * from './financial.types';
+
 export interface ScrapingConfig {
   navigationTimeout: number;
   retryAttempts: number;
@@ -43,5 +45,6 @@ export interface PaginatedResponse<T> {
     total: number;
     limit: number;
     skip: number;
+    message?: string;
   };
 }

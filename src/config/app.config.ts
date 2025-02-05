@@ -13,15 +13,15 @@ export interface AppConfig {
     config: ReturnType<typeof DocumentBuilder.prototype.build>;
   };
   database: {
-    type: 'postgres';
-    host: string;
-    port: number;
-    username: string;
-    password: string;
-    database: string;
+    type: 'mongodb';
+    url?: string;
+    host?: string;
+    port?: number;
+    username?: string;
+    password?: string;
+    database?: string;
     synchronize: boolean;
     logging: boolean;
-    ssl: boolean;
     entities: string[];
     migrations: string[];
   };
@@ -30,6 +30,12 @@ export interface AppConfig {
     colors: Record<string, string>;
     timestamp: boolean;
     debug: boolean;
+  };
+  http: {
+    maxRetries: number;
+    retryDelay: number;
+    timeout: number;
+    headers?: Record<string, string>;
   };
   stock: {
     maxParallelRequests: number;
@@ -56,22 +62,43 @@ export const getAppConfig = (): AppConfig => {
       config: new DocumentBuilder()
         .setTitle('Investing Scrape Data API')
         .setDescription(
-          'API documentation for the Investing Scrape Data application',
+          `
+API documentation for the Investing Scrape Data application.
+
+Features:
+- Financial data scraping and analysis
+- Stock information management
+- Exchange data tracking
+- Dynamic SQL querying with AI analysis
+- Natural language querying for financial data
+
+Available endpoints are organized into the following categories:
+- Financial: Endpoints for managing financial data and EPS growth rankings
+- Stock: Endpoints for managing stock information
+- Exchange: Endpoints for managing exchange data
+- Dynamic Query: AI-powered SQL query execution
+- Text Query: Natural language processing for financial data queries
+
+For more information, visit our repository or contact the development team.
+        `,
         )
         .setVersion('1.0')
-        .addTag('investing')
+        .addTag(
+          'Financial',
+          'Endpoints for managing financial data and analysis',
+        )
+        .addTag('Stock', 'Endpoints for managing stock information')
+        .addTag('Exchange', 'Endpoints for managing exchange data')
+        .addTag('Dynamic Query', 'AI-powered SQL query execution endpoints')
+        .addTag('Text Query', 'Natural language query processing endpoints')
+        .addBearerAuth()
         .build(),
     },
     database: {
-      type: 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      port: Number(process.env.DB_PORT) || 5432,
-      username: process.env.DB_USERNAME || 'postgres',
-      password: process.env.DB_PASSWORD || 'postgres',
-      database: process.env.DB_NAME || 'investing',
+      type: 'mongodb',
+      url: process.env.MONGODB_URL || 'mongodb://localhost:27017',
       synchronize: process.env.DB_SYNCHRONIZE === 'true',
       logging: process.env.DB_LOGGING === 'true',
-      ssl: process.env.DB_SSL === 'true',
       entities: [join(__dirname, '..', 'entities', '*.entity.{ts,js}')],
       migrations: [
         join(__dirname, '..', 'database', 'migrations', '*.{ts,js}'),
@@ -82,11 +109,21 @@ export const getAppConfig = (): AppConfig => {
       colors: {
         error: '\x1b[31m',
         warn: '\x1b[33m',
-        info: '\x1b[36m',
-        debug: '\x1b[90m',
+        info: '\x1b[32m',
+        debug: '\x1b[34m',
       },
       timestamp: process.env.LOG_TIMESTAMP !== 'false',
       debug: process.env.LOG_DEBUG === 'true',
+    },
+    http: {
+      maxRetries: Number(process.env.HTTP_MAX_RETRIES) || 3,
+      retryDelay: Number(process.env.HTTP_RETRY_DELAY) || 5000,
+      timeout: Number(process.env.HTTP_TIMEOUT) || 10000,
+      headers: {
+        'User-Agent':
+          process.env.HTTP_USER_AGENT ||
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      },
     },
     stock: {
       maxParallelRequests: Number(process.env.STOCK_MAX_PARALLEL_REQUESTS) || 3,

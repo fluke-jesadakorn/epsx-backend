@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { chromium } from 'playwright';
-import { Exchange } from '../../entities/exchange.entity';
+import { Exchange } from '../../database/entities/exchange.entity';
 import { logger } from '../../utils/logger';
 
 // TODO: Future Feature - Add caching layer to reduce database load
@@ -30,7 +30,7 @@ export class ExchangeService {
         throw new Error("Table not found");
       }
 
-      const exchanges = await page.$$eval<Exchange[], HTMLTableRowElement>(
+      const exchanges = await page.$$eval(
         "#main > div > div > table tbody tr",
         (rows) =>
           rows.map((row) => ({
@@ -41,6 +41,7 @@ export class ExchangeService {
             stocks: row.querySelectorAll("td")[4].innerText.trim(),
             exchange_url:
               row.querySelectorAll("td")[0].querySelector("a")?.href.trim() || "",
+            active: true, // Added to match entity schema
           }))
       );
 
@@ -53,27 +54,29 @@ export class ExchangeService {
       let newCount = 0;
       let updateCount = 0;
 
-      for (const exchange of exchanges) {
+      for (const exchangeData of exchanges) {
         try {
           const existingExchange = await this.exchangeRepository.findOne({
-            where: { market_code: exchange.market_code }
+            where: { market_code: exchangeData.market_code }
           });
 
           if (existingExchange) {
+            // Update existing exchange
             await this.exchangeRepository.update(
-              { market_code: exchange.market_code },
-              exchange
+              { market_code: exchangeData.market_code },
+              exchangeData
             );
             updateCount++;
-            logger.info(`Updated exchange: ${exchange.market_code}`);
+            logger.info(`Updated exchange: ${exchangeData.market_code}`);
           } else {
-            await this.exchangeRepository.save(exchange);
+            // Create new exchange
+            await this.exchangeRepository.save(exchangeData);
             newCount++;
-            logger.info(`Added new exchange: ${exchange.market_code}`);
+            logger.info(`Added new exchange: ${exchangeData.market_code}`);
           }
         } catch (error) {
           logger.error(
-            `Failed to save exchange ${exchange.market_code}:`,
+            `Failed to save exchange ${exchangeData.market_code}:`,
             error
           );
         }
