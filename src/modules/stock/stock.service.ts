@@ -1,58 +1,73 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { HttpService } from '../../common/http/http.service';
 import { StockScreenerResponse } from '../../types/stock-analysis.types';
 import { logger } from '../../utils/logger';
-import { Stock } from '../../database/entities/stock.entity';
-import { Exchange } from '../../database/entities/exchange.entity';
+import { PaginationParams } from '../../types';
+import { getPaginationOptions } from '../../utils/pagination.util';
+import { Paginate } from '../../utils/decorators/paginate.decorator';
+import { Stock } from '../../database/schemas/stock.schema';
+import { Exchange } from '../../database/schemas/exchange.schema';
 import { config } from '../../config';
 
-/**
- * Configuration used by the StockService:
- * - maxParallelRequests: Number of exchanges to process concurrently
- * - stockBatchSize: Number of stocks to process in one batch
- * - batchDelay: Delay between processing batches in milliseconds
- *
- * These values can be configured via environment variables:
- * - STOCK_MAX_PARALLEL_REQUESTS
- * - STOCK_BATCH_SIZE
- * - STOCK_BATCH_DELAY
- */
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// TODO: Future Features
-// 1. Add a mechanism to sync exchange data changes with associated stocks
-// 2. Consider implementing a background job to periodically update stock exchange info
-// 3. Add validation to ensure exchange data is complete before stock creation
-// 4. Consider caching exchange data to reduce database queries
-// 5. Add support for different API endpoints per exchange to handle special cases
-// 6. Enhance error handling with detailed error types and recovery strategies
-// 7. Implement comprehensive rate limiting per exchange to prevent API blocks
-// 8. Implement data versioning to track historical changes in stock information
-// 9. Add data validation rules specific to each exchange's format
-// 10. Consider implementing soft delete for stock entries
-// 11. Review and improve error handling for edge cases in stock data processing
-// 12. Consider implementing batch retry mechanism for failed updates
-// 13. Add support for handling multiple primary exchanges per stock
-
 @Injectable()
 export class StockService {
   constructor(
-    @InjectRepository(Stock)
-    private stockRepository: Repository<Stock>,
-    @InjectRepository(Exchange)
-    private exchangeRepository: Repository<Exchange>,
+    @InjectModel(Stock.name)
+    private stockModel: Model<Stock>,
+    @InjectModel(Exchange.name)
+    private exchangeModel: Model<Exchange>,
     private readonly httpService: HttpService,
   ) {}
 
+  /**
+   * Get all stocks with pagination
+   */
+  @Paginate()
+  async getAllStocks(params: PaginationParams = {}) {
+    const { skip, take } = getPaginationOptions(params);
+    const [data, total] = await Promise.all([
+      this.stockModel.find().populate('exchange').skip(skip).limit(take).exec(),
+      this.stockModel.countDocuments().exec(),
+    ]);
+    return { data, total };
+  }
+
+  /**
+   * Get stocks by exchange with pagination
+   */
+  @Paginate()
+  async getStocksByExchange(exchangeId: string, params: PaginationParams = {}) {
+    if (!exchangeId) {
+      throw new BadRequestException('Exchange ID is required');
+    }
+
+    const { skip, take } = getPaginationOptions(params);
+    const [data, total] = await Promise.all([
+      this.stockModel
+        .find({ exchange: exchangeId })
+        .populate('exchange')
+        .skip(skip)
+        .limit(take)
+        .exec(),
+      this.stockModel.countDocuments({ exchange: exchangeId }).exec(),
+    ]);
+    return { data, total };
+  }
+
   async saveStockData() {
-    const existingExchanges = await this.exchangeRepository.find();
+    const existingExchanges = await this.exchangeModel.find().exec();
 
     try {
-      // Process exchanges in batches
       for (
         let i = 0;
         i < existingExchanges.length;
@@ -78,10 +93,9 @@ export class StockService {
               e.market_code,
             );
 
-          // Validate stock data
           if (!stockData) {
             logger.error(`Failed to fetch data for exchange ${e.market_code}`);
-            return;
+            throw new NotFoundException('Failed to fetch stock data');
           }
 
           // Validate data structure and extract stocks array
@@ -89,7 +103,9 @@ export class StockService {
             logger.error(
               `Invalid data structure received for exchange ${e.market_code}`,
             );
-            return;
+            throw new NotFoundException(
+              'Invalid data structure received for exchange ${e.market_code}',
+            );
           }
 
           const stocksToProcess = stockData.data.data;
@@ -111,102 +127,88 @@ export class StockService {
               j + config.app.stock.stockBatchSize,
             );
 
-            try {
-              // Get all existing stocks for this batch in one query
-              const symbols = stockBatch.map((s) => s.s);
-              const existingStocks = await this.stockRepository.find({
-                where: {
-                  symbol: In(symbols),
-                },
-              });
+            // Create array of symbols for bulk existence check
+            const symbols = stockBatch.map((s) => s.s);
 
-              const existingStockMap = new Map(
-                existingStocks.map((stock) => [stock.symbol, stock]),
-              );
+            // Bulk check for existing stocks
+            const existingStocks = await this.stockModel
+              .find({ symbol: { $in: symbols } })
+              .select('symbol')
+              .exec();
 
-              // Helper function to compare stock data
-              const hasDataChanged = (
-                existing: Stock,
-                newData: Partial<Stock>,
-              ): boolean => {
-                return (
-                  existing.company_name !== newData.company_name ||
-                  existing.primary_exchange_market_code !== newData.primary_exchange_market_code ||
-                  JSON.stringify(existing.exchanges) !== JSON.stringify(newData.exchanges)
-                );
-              };
+            const existingSymbols = new Set(
+              existingStocks.map((s) => s.symbol),
+            );
 
-              const toUpdate: Stock[] = [];
-              const toInsert: Partial<Stock>[] = [];
+            // Filter only new stocks that need to be inserted
+            const newStocks = stockBatch
+              .filter((s) => !existingSymbols.has(s.s))
+              .map((s) => ({
+                symbol: s.s,
+                company_name: s.n,
+                exchange: e, // Add exchange relationship
+              }));
 
-              stockBatch.forEach((stockData: any) => {
-                if (!stockData.s || !stockData.n) {
-                  logger.warn(
-                    `Invalid stock data received: ${JSON.stringify(stockData)}`,
-                  );
-                  return;
-                }
+            // Bulk insert new stocks
+if (newStocks.length > 0) {
+  try {
+    // Update exchange document to include new stock references
+    const createdStocks = await this.stockModel.create(newStocks);
+    
+    // Update exchange document with the new stock references
+    await this.exchangeModel.findByIdAndUpdate(
+      e._id,
+      {
+        $push: {
+          stocks: {
+            $each: createdStocks.map(stock => stock._id)
+          }
+        }
+      },
+      { new: true }
+    );
 
-                // Create stock entity with all required fields
-                const stockEntity: Partial<Stock> = {
-                  symbol: stockData.s,
-                  company_name: stockData.n,
-                  primary_exchange_market_code: e.market_code,
-                  exchanges: [{ market_code: e.market_code, primary: true }],
-                };
+    logger.info(`Inserted ${newStocks.length} new stocks and updated exchange references`);
 
-                const existing = existingStockMap.get(stockData.s);
-                if (existing) {
-                  // Only update if data has actually changed
-                  if (hasDataChanged(existing, stockEntity)) {
-                    Object.assign(existing, stockEntity);
-                    toUpdate.push(existing);
-                    logger.debug(
-                      `Stock ${stockData.s} data has changed, updating...`,
-                    );
-                  }
-                } else {
-                  toInsert.push(stockEntity);
-                  logger.debug(
-                    `New stock ${stockData.s} found, will be inserted`,
-                  );
-                }
-              });
+    /**
+     * TODO: Future Improvements
+     * 1. Add atomic transactions for consistent data
+     * 2. Implement bulk operations for better performance
+     * 3. Add validation for duplicate stock references
+     * 4. Add cascade delete functionality
+     * 5. Implement periodic reference integrity checks
+     * 6. Add batch size configuration for reference updates
+     * 7. Implement rollback mechanism for failed operations
+     * 8. Add caching for frequently accessed relationships
+     * 9. Implement query optimization for relationship lookups
+     * 10. Add monitoring for relationship health metrics
+     */
+  } catch (error) {
+    logger.error(`Failed to insert stocks batch: ${error.message}`);
+    // TODO: Add rollback mechanism for partial failures
+  }
+}
 
-              // Perform bulk operations
-              if (toInsert.length > 0) {
-                await this.stockRepository.save(toInsert);
-              }
-
-              if (toUpdate.length > 0) {
-                await this.stockRepository.save(toUpdate);
-              }
-
-              processedCount += stockBatch.length;
-              logger.info(`Processed ${stockBatch.length} stocks in batch`);
-            } catch (error: any) {
-              // Handle any errors
-              const formattedError =
-                error instanceof Error
-                  ? error
-                  : new Error(JSON.stringify(error));
-              logger.error(
-                `Failed to process stock batch`,
-                formattedError.message,
-              );
-              throw formattedError;
-            }
+            processedCount += stockBatch.length;
+            logger.info(
+              `Processed ${stockBatch.length} stocks in batch (${newStocks.length} new)`,
+            );
           }
 
+          // TODO: Future improvements
+          // 1. Implement retry mechanism for failed batches
+          // 2. Add data validation before saving
+          // 3. Add upsert functionality to update existing stock data
+          // 4. Implement real-time progress tracking
+          // 5. Add cleanup for orphaned stock records
+
           logger.info(
-            `Exchange ${e.name} processing completed. Processed ${processedCount} stocks.`,
+            `Exchange ${e.exchange_name} processing completed. Processed ${processedCount} stocks.`,
           );
         });
 
-        // Wait for all exchanges in the current batch to complete
         await Promise.all(batchPromises);
 
-        // Add delay between batches to prevent rate limiting
         if (
           i + config.app.stock.maxParallelRequests <
           existingExchanges.length
@@ -218,7 +220,6 @@ export class StockService {
         }
       }
 
-      // Log completion of all batches
       logger.info('All batches have been processed successfully.');
     } catch (error) {
       logger.error('Fatal error during stock data processing');

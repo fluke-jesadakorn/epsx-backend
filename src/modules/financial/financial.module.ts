@@ -1,18 +1,26 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { FinancialController } from './financial.controller';
 import { FinancialService } from './financial.service';
-import { Financial } from '../../database/entities/financial.entity';
-import { Stock } from '../../database/entities/stock.entity';
+import {
+  Financial,
+  FinancialSchema,
+} from '../../database/schemas/financial.schema';
+import { Stock, StockSchema } from '../../database/schemas/stock.schema';
 import { HttpModule } from '../../common/http/http.module';
 import { FetchStateService } from './services/fetch-state.service';
 import { FinancialFetchService } from './services/financial-fetch.service';
 import { FinancialDataService } from './services/financial-data.service';
 import { WorkerPoolService } from './services/worker-pool.service';
+import { Exchange, ExchangeSchema } from 'src/database/schemas/exchange.schema';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Financial, Stock]),
+    MongooseModule.forFeature([
+      { name: Financial.name, schema: FinancialSchema },
+      { name: Stock.name, schema: StockSchema },
+      { name: Exchange.name, schema: ExchangeSchema },
+    ]),
     HttpModule,
   ],
   controllers: [FinancialController],
@@ -21,7 +29,7 @@ import { WorkerPoolService } from './services/worker-pool.service';
     FetchStateService,
     FinancialFetchService,
     FinancialDataService,
-    WorkerPoolService
+    WorkerPoolService,
   ],
   exports: [FinancialService],
 })

@@ -50,29 +50,29 @@ EXPOSE 8080
 VOLUME ["/app/data"]
 
 # Start the application
-CMD ["bun", "run", "start:prod"]
+ENTRYPOINT ["bun", "run", "start:prod"]
 
 # Documentation for environment variables and Cloud Run deployment
 LABEL org.opencontainers.image.description="Investing Scraping Service\n\
-SECURITY NOTE: In production, use Cloud Run's environment variables or secrets manager\n\
-instead of .env files for sensitive data.\n\n\
-Required environment variables for Cloud Run deployment:\n\
-- DB_HOST: Database host\n\
-- DB_PORT: Database port\n\
-- DB_USERNAME: Database username\n\
-- DB_PASSWORD: Database password\n\
-- DB_NAME: Database name\n\
-- DB_SSL: Set to 'true' for Cloud SQL (recommended)\n\
-\n\
-Optional environment variables:\n\
-- PORT: Application port (default: 8080, automatically set by Cloud Run)\n\
-- HEADLESS_MODE: Set to 'false' to disable headless mode (default: true)\n\
-- DEBUG_MODE: Set to 'true' to enable debug mode (default: false)\n\
-- DEBUG_SLOW_MO: Slowdown time in ms for debug mode (default: 100)\n\
-- LOG_LEVEL: Logging level (default: info)\n\
-- STOCK_MAX_PARALLEL_REQUESTS: Max parallel stock requests (default: 3)\n\
-- STOCK_BATCH_SIZE: Stock batch size (default: 100)\n\
-- STOCK_BATCH_DELAY: Delay between batches in ms (default: 1000)"
+    SECURITY NOTE: In production, use Cloud Run's environment variables or secrets manager\n\
+    instead of .env files for sensitive data.\n\n\
+    Required environment variables for Cloud Run deployment:\n\
+    - DB_HOST: Database host\n\
+    - DB_PORT: Database port\n\
+    - DB_USERNAME: Database username\n\
+    - DB_PASSWORD: Database password\n\
+    - DB_NAME: Database name\n\
+    - DB_SSL: Set to 'true' for Cloud SQL (recommended)\n\
+    \n\
+    Optional environment variables:\n\
+    - PORT: Application port (default: 8080, automatically set by Cloud Run)\n\
+    - HEADLESS_MODE: Set to 'false' to disable headless mode (default: true)\n\
+    - DEBUG_MODE: Set to 'true' to enable debug mode (default: false)\n\
+    - DEBUG_SLOW_MO: Slowdown time in ms for debug mode (default: 100)\n\
+    - LOG_LEVEL: Logging level (default: info)\n\
+    - STOCK_MAX_PARALLEL_REQUESTS: Max parallel stock requests (default: 3)\n\
+    - STOCK_BATCH_SIZE: Stock batch size (default: 100)\n\
+    - STOCK_BATCH_DELAY: Delay between batches in ms (default: 1000)"
 
 # Cloud Run deployment notes:
 # 1. Health check: Cloud Run will automatically use /health endpoint

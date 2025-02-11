@@ -3,13 +3,7 @@ import { join } from 'path';
 import { logger } from '../../../utils/logger';
 import { promises as fs } from 'fs';
 import { existsSync } from 'fs';
-
-export interface FetchState {
-  currentPage: number;
-  totalProcessed: number;
-  lastProcessedStock: string | null;
-  lastUpdated: string;
-}
+import { FetchState } from '../../../types/financial.types';
 
 @Injectable()
 export class FetchStateService {

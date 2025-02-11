@@ -10,7 +10,8 @@ export class ExchangeController {
   @Get('scrape')
   @ApiOperation({
     summary: 'Scrape exchange data',
-    description: 'Fetches and saves exchange data including trading hours, holidays, and market status'
+    description:
+      'Fetches and saves exchange data including trading hours, holidays, and market status',
   })
   @ApiResponse({
     status: 200,
@@ -28,7 +29,7 @@ export class ExchangeController {
               timezone: 'America/New_York',
               openTime: '09:30',
               closeTime: '16:00',
-              status: 'open'
+              status: 'open',
             },
             {
               name: 'NASDAQ',
@@ -37,12 +38,12 @@ export class ExchangeController {
               timezone: 'America/New_York',
               openTime: '09:30',
               closeTime: '16:00',
-              status: 'open'
-            }
-          ]
-        }
-      }
-    }
+              status: 'open',
+            },
+          ],
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 500,
@@ -52,10 +53,10 @@ export class ExchangeController {
         example: {
           statusCode: 500,
           message: 'Failed to scrape exchange data',
-          error: 'Internal Server Error'
-        }
-      }
-    }
+          error: 'Internal Server Error',
+        },
+      },
+    },
   })
   async scrapeExchanges() {
     return this.exchangeService.scrapeAndSaveExchanges();

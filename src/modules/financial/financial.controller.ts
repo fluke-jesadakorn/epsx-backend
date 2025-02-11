@@ -1,15 +1,13 @@
-import { Controller, Get, Query, Req } from '@nestjs/common';
-import { PaginatedResponse, EPSGrowthResult } from '../../types';
+import {
+  Controller,
+  Get,
+  Query,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
+import { PaginationParams } from '../../types';
 import { FinancialService } from './financial.service';
-import { Request } from 'express';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
-
-interface AuthenticatedRequest extends Request {
-  user: {
-    id: string;
-    roles: string[];
-  };
-}
 
 @ApiTags('Financial')
 @Controller('financial')
@@ -19,7 +17,7 @@ export class FinancialController {
   @Get('scrape')
   @ApiOperation({
     summary: 'Scrape financial data',
-    description: 'Fetches and saves financial data from external sources'
+    description: 'Fetches and saves financial data from external sources',
   })
   @ApiResponse({
     status: 200,
@@ -29,10 +27,10 @@ export class FinancialController {
         example: {
           success: true,
           message: 'Financial data scraped and saved successfully',
-          count: 100
-        }
-      }
-    }
+          count: 100,
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 500,
@@ -42,37 +40,59 @@ export class FinancialController {
         example: {
           statusCode: 500,
           message: 'Failed to scrape financial data',
-          error: 'Internal Server Error'
-        }
-      }
-    }
+          error: 'Internal Server Error',
+        },
+      },
+    },
   })
   async scrapeFinancials() {
-    return this.financialService.fetchAndSaveFinancials();
+    try {
+      const count = await this.financialService.fetchAndSaveFinancials();
+      return {
+        success: true,
+        message: 'Financial data scraped and saved successfully',
+        count,
+      };
+    } catch (error) {
+      throw new HttpException(
+        {
+          statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+          message: 'Failed to scrape financial data',
+          error: error.message,
+        },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
   }
 
-  /**
-   * Get stocks ranked by EPS growth with pagination support
-   * @param limit Maximum number of results to return (default: 20)
-   * @param skip Number of results to skip for pagination (default: 0)
-   * @returns Paginated array of stocks with their EPS growth percentages
-   */
   @Get('eps-growth-ranking')
   @ApiOperation({
     summary: 'Get EPS growth rankings',
-    description: 'Get stocks ranked by EPS growth with pagination support'
+    description: 'Get stocks ranked by EPS growth with pagination support',
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (default: 1)',
   })
   @ApiQuery({
     name: 'limit',
     required: false,
     type: Number,
-    description: 'Maximum number of results to return (default: 20, max: 100)'
+    description: 'Items per page (default: 20, max: 100)',
   })
   @ApiQuery({
-    name: 'skip',
+    name: 'orderBy',
     required: false,
-    type: Number,
-    description: 'Number of results to skip for pagination (default: 0)'
+    type: String,
+    description: 'Field to sort by',
+  })
+  @ApiQuery({
+    name: 'direction',
+    required: false,
+    enum: ['ASC', 'DESC'],
+    description: 'Sort direction',
   })
   @ApiResponse({
     status: 200,
@@ -83,23 +103,37 @@ export class FinancialController {
           data: [
             {
               symbol: 'AAPL',
-              name: 'Apple Inc.',
-              epsGrowth: 25.5,
-              rank: 1
+              company_name: 'Apple Inc.',
+              market_code: 'NYSE',
+              exchange_name: 'New York Stock Exchange',
+              eps: 3.45,
+              eps_growth: 25.5,
+              rank: 1,
+              last_report_date: '2025-01-15',
             },
             {
               symbol: 'GOOGL',
-              name: 'Alphabet Inc.',
-              epsGrowth: 20.3,
-              rank: 2
-            }
+              company_name: 'Alphabet Inc.',
+              market_code: 'NASDAQ',
+              exchange_name: 'NASDAQ Stock Market',
+              eps: 2.89,
+              eps_growth: 20.3,
+              rank: 2,
+              last_report_date: '2025-01-20',
+            },
           ],
-          total: 100,
-          limit: 20,
-          skip: 0
-        }
-      }
-    }
+          metadata: {
+            skip: 0,
+            total: 100,
+            page: 1,
+            limit: 20,
+            totalPages: 5,
+            orderBy: 'eps_growth',
+            direction: 'DESC',
+          },
+        },
+      },
+    },
   })
   @ApiResponse({
     status: 401,
@@ -109,24 +143,20 @@ export class FinancialController {
         example: {
           statusCode: 401,
           message: 'Unauthorized access',
-          error: 'Unauthorized'
-        }
-      }
-    }
+          error: 'Unauthorized',
+        },
+      },
+    },
   })
-  async getEPSGrowthRanking(
-    @Req() req: Request,
-    @Query('limit') limitStr?: string,
-    @Query('skip') skipStr?: string,
-  ): Promise<PaginatedResponse<EPSGrowthResult>> {
-    // TODO: Implement middleware for Authorization, RBAC, and Authentication
-    const limit = limitStr
-      ? Math.max(1, Math.min(100, parseInt(limitStr)))
-      : 20;
-    const skip = skipStr ? Math.max(0, parseInt(skipStr)) : 0;
-    console.log(req.cookies);
-
-    const userId = (req as AuthenticatedRequest).user?.id || 'service_role';
-    return await this.financialService.getEPSGrowthRanking(limit, skip);
+  async getEPSGrowthRanking(@Query() params: PaginationParams) {
+    // Parse and validate pagination params
+    return await this.financialService.getEPSGrowthRanking({
+      page: params.page ? Math.max(1, parseInt(String(params.page))) : 1,
+      limit: params.limit
+        ? Math.max(1, Math.min(100, parseInt(String(params.limit))))
+        : 20,
+      orderBy: params.orderBy,
+      direction: params.direction,
+    });
   }
 }

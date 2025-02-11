@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ExchangeController } from './exchange.controller';
 import { ExchangeService } from './exchange.service';
-import { Exchange } from '../../database/entities/exchange.entity';
+import { Exchange, ExchangeSchema } from '../../database/schemas/exchange.schema';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Exchange])],
+  imports: [MongooseModule.forFeature([{ name: Exchange.name, schema: ExchangeSchema }])],
   controllers: [ExchangeController],
   providers: [ExchangeService],
   exports: [ExchangeService],

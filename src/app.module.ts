@@ -4,8 +4,7 @@ import { ExchangeModule } from './modules/exchange/exchange.module';
 import { StockModule } from './modules/stock/stock.module';
 import { FinancialModule } from './modules/financial/financial.module';
 import { DatabaseModule } from './database/database.module';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { EventStoreModule } from './modules/event-store/event-store.module';
+import { ConfigModule } from '@nestjs/config';
 import { HealthCheckModule } from './modules/health-check/health-check.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { AiServiceModule } from './modules/ai-service/ai-service.module';
@@ -44,7 +43,6 @@ import { AiServiceModule } from './modules/ai-service/ai-service.module';
       cache: true,
     }),
     DatabaseModule,
-    EventStoreModule,
     HttpModule,
     ExchangeModule,
     StockModule,

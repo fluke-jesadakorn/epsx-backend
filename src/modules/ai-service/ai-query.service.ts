@@ -1,15 +1,26 @@
 import { Injectable, Logger } from '@nestjs/common';
-import OpenAI from 'openai';
 import { AIMessage, AIRequestOptions } from './schema/ai-provider.schema';
 import { SqlQueryResult } from './schema/sql-query.schema';
 import { ProviderFactory } from './providers/provider.factory';
-import { AI_PROVIDER_CONFIG, DEFAULT_AI_OPTIONS } from './config/ai-provider.config';
-import { QUERY_CONTEXT, QUERY_VALIDATION, SYSTEM_PROMPT } from './config/query-rules.config';
+import {
+  AI_PROVIDER_CONFIG,
+  DEFAULT_AI_OPTIONS,
+} from './config/ai-provider.config';
+import {
+  QUERY_CONTEXT,
+  QUERY_VALIDATION,
+  SYSTEM_PROMPT,
+} from './config/query-rules.config';
+import { BaseMessage, HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { JsonOutputParser } from '@langchain/core/output_parsers';
+import { PromptTemplate } from '@langchain/core/prompts';
+import { z } from 'zod';
 
 @Injectable()
 export class AiQueryService {
   private readonly logger = new Logger(AiQueryService.name);
-  private readonly openai: OpenAI;
+  private readonly model: BaseChatModel;
   private readonly provider;
   private readonly config;
 
@@ -31,45 +42,53 @@ export class AiQueryService {
     }
 
     this.provider.validateConfig(this.config);
-    this.openai = this.provider.createClient(this.config);
+    this.model = this.provider.createClient(this.config);
+  }
+
+  private convertToLangChainMessages(messages: AIMessage[]): BaseMessage[] {
+    return messages.map(msg => {
+      const content = msg.content;
+      switch (msg.role) {
+        case 'system':
+          return new SystemMessage(content);
+        case 'user':
+          return new HumanMessage(content);
+        case 'assistant':
+          return new HumanMessage(content); // LangChain's AIChatMessage is internal
+        default:
+          throw new Error(`Unknown message role: ${msg.role}`);
+      }
+    });
   }
 
   async generateSqlQuery(naturalQuery: string): Promise<SqlQueryResult> {
     try {
       this.logger.debug(`Generating SQL query for: ${naturalQuery}`);
 
-      const messages: AIMessage[] = [
-        {
-          role: 'system',
-          content: SYSTEM_PROMPT,
-        },
-        {
-          role: 'user',
-          content: naturalQuery,
-        },
-      ];
+      const outputParser = new JsonOutputParser<{ query: string; parameters: any[] }>();
 
-      const response = await this.openai.chat.completions.create({
-        model: this.config.model,
-        messages,
-        ...DEFAULT_AI_OPTIONS
+      const prompt = PromptTemplate.fromTemplate(`
+        {system_prompt}
+        
+        Your response must be a JSON object with two fields:
+        - query: The SQL query string
+        - parameters: An array of parameters for the query
+        
+        User query: {query}
+      `);
+
+      const chain = prompt.pipe(this.model).pipe(outputParser);
+      
+      const result = await chain.invoke({
+        system_prompt: SYSTEM_PROMPT,
+        query: naturalQuery,
       });
 
-      if (!response?.choices?.[0]?.message?.content) {
-        this.logger.error(
-          'Invalid AI response structure:',
-          JSON.stringify(response, null, 2),
-        );
-        throw new Error('No response content received from AI');
-      }
-
-      const result = JSON.parse(response.choices[0].message.content);
-      
       this.validateGeneratedQuery(result);
 
       return {
         query: result.query,
-        params: result.parameters || []
+        params: result.parameters || [],
       };
     } catch (error) {
       this.logger.error('Error generating SQL query:', error);
@@ -83,14 +102,20 @@ export class AiQueryService {
     }
 
     const query = result.query.toUpperCase();
-    
-    if (!QUERY_VALIDATION.allowedOperations.some(op => query.includes(op))) {
+
+    if (
+      QUERY_VALIDATION.allowedOperations?.length &&
+      !QUERY_VALIDATION.allowedOperations.some((op) => query.includes(op))
+    ) {
       throw new Error('Query contains unsupported operations');
     }
 
-    if (!QUERY_VALIDATION.requiredTables.some(table => 
-      query.includes(table.toUpperCase())
-    )) {
+    if (
+      QUERY_VALIDATION.requiredTables?.length &&
+      !QUERY_VALIDATION.requiredTables.some((table) =>
+        query.includes(table.toUpperCase()),
+      )
+    ) {
       throw new Error('Query must include required tables');
     }
 
@@ -99,15 +124,35 @@ export class AiQueryService {
     }
   }
 
+  async handleChatQuery(
+    messages: AIMessage[],
+    options?: AIRequestOptions,
+  ): Promise<AIMessage> {
+    try {
+      this.logger.debug('Processing chat query');
+
+      const langChainMessages = this.convertToLangChainMessages(messages);
+      const result = await this.model.invoke(langChainMessages);
+      
+      return {
+        role: 'assistant',
+        content: result.content.toString(),
+      };
+    } catch (error) {
+      this.logger.error('Error processing chat query:', error);
+      throw new Error(`Failed to process chat query: ${error.message}`);
+    }
+  }
+
   /**
    * Future enhancements:
-   * TODO: Add support for query result caching
-   * TODO: Add support for query execution plans
-   * TODO: Add support for query optimization suggestions
-   * TODO: Add support for custom query templates
-   * TODO: Add support for query result validation
-   * TODO: Add support for query performance metrics
-   * TODO: Add support for query history tracking
-   * TODO: Add support for query suggestions based on history
+   * TODO: Add support for query result caching with LangChain Cache implementation
+   * TODO: Add support for query execution plans using LangChain Agents
+   * TODO: Add support for query optimization suggestions using LangChain Chain composition
+   * TODO: Add support for custom query templates with LangChain PromptTemplates
+   * TODO: Add support for query result validation using LangChain OutputParser
+   * TODO: Add support for query performance metrics with LangChain Callbacks
+   * TODO: Add support for query history tracking using LangChain Memory
+   * TODO: Add support for query suggestions based on history using LangChain Retrieval
    */
 }

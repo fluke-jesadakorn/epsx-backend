@@ -5,9 +5,7 @@ import { join } from 'path';
 export interface AppConfig {
   port: number;
   cors: CorsOptions;
-  staticAssets: {
-    path: string;
-  };
+  staticAssets: { path: string };
   swagger: {
     path: string;
     config: ReturnType<typeof DocumentBuilder.prototype.build>;
@@ -54,9 +52,7 @@ export const getAppConfig = (): AppConfig => {
       methods: ['GET', 'POST'],
       allowedHeaders: ['Content-Type', 'Authorization'],
     },
-    staticAssets: {
-      path: join(__dirname, '..', '..', 'public'),
-    },
+    staticAssets: { path: join(__dirname, '..', '..', 'public') },
     swagger: {
       path: 'docs',
       config: new DocumentBuilder()

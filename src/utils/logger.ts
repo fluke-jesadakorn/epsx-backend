@@ -8,19 +8,23 @@ class Logger {
     return now.toISOString();
   }
 
-  private formatMessage(level: string, message: string | Error, context?: string): string {
+  private formatMessage(
+    level: string,
+    message: string | Error,
+    context?: string,
+  ): string {
     const timestamp = config.logger.timestamp ? `[${this.getTimestamp()}]` : '';
     const colorCode = config.logger.colors[level.toLowerCase()] || '';
     const formattedLevel = `[${level.toUpperCase()}]`;
     const contextStr = context ? `[${context}] ` : '';
-    
+
     let formattedMessage: string;
     if (message instanceof Error) {
       formattedMessage = `${message.message}\n${message.stack}`;
     } else {
       formattedMessage = message;
     }
-    
+
     return `${timestamp}${colorCode}${formattedLevel} ${contextStr}${formattedMessage}`;
   }
 

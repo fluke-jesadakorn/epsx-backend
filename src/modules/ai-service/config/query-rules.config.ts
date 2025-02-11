@@ -35,8 +35,8 @@ Tables:
 - financials (${Object.keys(QUERY_CONTEXT.tables.financials).join(', ')})
 
 Available Views:
-- ${QUERY_CONTEXT.views.latest_financials}: Latest financial metrics per stock
-- ${QUERY_CONTEXT.views.stock_performance_metrics}: Aggregated performance metrics
+- ${QUERY_CONTEXT.views?.latest_financials || 'latest_financials_view'}: Latest financial metrics per stock
+- ${QUERY_CONTEXT.views?.stock_performance_metrics || 'stock_performance_view'}: Aggregated performance metrics
 
 Rules:
 1. Only generate SELECT queries

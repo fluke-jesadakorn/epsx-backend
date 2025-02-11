@@ -1,20 +1,24 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { getDatabaseConfig } from './database.config';
-import { Exchange } from './entities/exchange.entity';
-import { Stock } from './entities/stock.entity';
-import { Financial } from './entities/financial.entity';
+import { getMongooseConfig } from './mongoose.config';
+import { Financial, FinancialSchema } from './schemas/financial.schema';
+import { Stock, StockSchema } from './schemas/stock.schema';
+import { Exchange, ExchangeSchema } from './schemas/exchange.schema';
 
 @Module({
   imports: [
-    TypeOrmModule.forRootAsync({
+    MongooseModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: getDatabaseConfig,
+      useFactory: getMongooseConfig,
       inject: [ConfigService],
     }),
-    TypeOrmModule.forFeature([Exchange, Stock, Financial]),
+    MongooseModule.forFeature([
+      { name: Financial.name, schema: FinancialSchema },
+      { name: Stock.name, schema: StockSchema },
+      { name: Exchange.name, schema: ExchangeSchema }
+    ]),
   ],
-  exports: [TypeOrmModule],
+  exports: [MongooseModule],
 })
 export class DatabaseModule {}

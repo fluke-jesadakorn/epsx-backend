@@ -1,37 +1,17 @@
-/**
- * Schema definitions for query responses
- */
+import { 
+  RawQueryResultSchema,
+  BaseQueryResponseSchema,
+  CompleteQueryResponseSchema 
+} from '../../../types';
 
-// Raw database query result
-export interface RawQueryResultSchema {
-  columns: string[];
-  rows: any[][];
-  rowCount: number;
-  command: string;
-}
+// Re-export types from centralized location
+export type {
+  RawQueryResultSchema,
+  BaseQueryResponseSchema,
+  CompleteQueryResponseSchema
+};
 
-// Base query response structure
-export interface BaseQueryResponseSchema {
-  success: boolean;
-  timestamp: string;
-  executionTime: number;
-}
-
-/**
- * Complete query response schema
- */
-export interface CompleteQueryResponseSchema extends BaseQueryResponseSchema {
-  data: any[];
-  analysis: string;
-  meta: {
-    query?: string;
-    params?: any[];
-  };
-}
-
-/**
- * TODO: Future Enhancements
- * - Add schema for response caching
- * - Add schema for export formats (CSV, Excel)
- * - Add schema for custom query templates
- */
+// TODO: Add response validation schemas
+// TODO: Add error handling schemas
+// TODO: Add custom transformation schemas
+// TODO: Add query caching schemas

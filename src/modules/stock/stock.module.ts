@@ -1,14 +1,17 @@
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { MongooseModule } from '@nestjs/mongoose';
 import { HttpModule } from '../../common/http/http.module';
 import { StockController } from './stock.controller';
 import { StockService } from './stock.service';
-import { Stock } from '../../database/entities/stock.entity';
-import { Exchange } from '../../database/entities/exchange.entity';
+import { Stock, StockSchema } from '../../database/schemas/stock.schema';
+import { Exchange, ExchangeSchema } from '../../database/schemas/exchange.schema';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Stock, Exchange]),
+    MongooseModule.forFeature([
+      { name: Stock.name, schema: StockSchema },
+      { name: Exchange.name, schema: ExchangeSchema }
+    ]),
     HttpModule,
   ],
   controllers: [StockController],

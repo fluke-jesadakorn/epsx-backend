@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { logger } from '../../../utils/logger';
-import { StockFinancialResponse } from '../../../types/stock-analysis.types';
-import { StockWithMarketCode, WorkerConfig } from '../../../types';
+import { StockWithMarketCode, WorkerConfig, StockFinancialResponse } from '../../../types/financial.types';
 import { FinancialFetchService } from './financial-fetch.service';
 import { FetchStateService } from './fetch-state.service';
 
@@ -16,20 +15,20 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxRetries: 3,
   initialDelay: 1000, // 1 second
   maxDelay: 10000, // 10 seconds
-  backoffFactor: 2
+  backoffFactor: 2,
 };
 
 @Injectable()
 export class WorkerPoolService {
   constructor(
     private readonly financialFetch: FinancialFetchService,
-    private readonly fetchState: FetchStateService
+    private readonly fetchState: FetchStateService,
   ) {}
 
   private async retryWithBackoff<T>(
     operation: () => Promise<T>,
     stock: StockWithMarketCode,
-    retryConfig: RetryConfig = DEFAULT_RETRY_CONFIG
+    retryConfig: RetryConfig = DEFAULT_RETRY_CONFIG,
   ): Promise<T> {
     let lastError: Error = new Error('No attempts made');
     let delay = retryConfig.initialDelay;
@@ -38,25 +37,34 @@ export class WorkerPoolService {
       try {
         if (attempt > 0) {
           logger.info(
-            `Retry attempt ${attempt} for ${stock.symbol} after ${delay}ms delay`
+            `Retry attempt ${attempt} for ${stock.symbol} after ${delay}ms delay`,
           );
           await WorkerPoolService.sleep(delay);
         }
         return await operation();
       } catch (error) {
         lastError = error as Error;
+
+        // Check for duplicate key error
+        if (error.message?.includes('E11000 duplicate key error')) {
+          logger.info(
+            `Stock ${stock.symbol} already exists for market ${stock.market_code}, skipping`,
+          );
+          return undefined as T;
+        }
+
         logger.warn(
           `Attempt ${attempt + 1}/${retryConfig.maxRetries + 1} failed for ${
             stock.symbol
-          }: ${error.message}`
+          }: ${error.message}`,
         );
-        
+
         // Determine if we should retry based on error type
         if (this.shouldRetry(error)) {
           // Calculate next delay with exponential backoff
           delay = Math.min(
             delay * retryConfig.backoffFactor,
-            retryConfig.maxDelay
+            retryConfig.maxDelay,
           );
         } else {
           // If error is not retryable, throw immediately
@@ -68,11 +76,16 @@ export class WorkerPoolService {
     throw new Error(
       `Failed to process ${stock.symbol} after ${
         retryConfig.maxRetries + 1
-      } attempts. Last error: ${lastError.message}`
+      } attempts. Last error: ${lastError.message}`,
     );
   }
 
   private shouldRetry(error: any): boolean {
+    // Don't retry on duplicate key errors
+    if (error.message?.includes('E11000 duplicate key error')) {
+      return false;
+    }
+
     // Retry on network errors or rate limiting
     if (error.response) {
       const status = error.response.status;
@@ -86,47 +99,95 @@ export class WorkerPoolService {
   async processStocksBatch(
     stocks: StockWithMarketCode[],
     lastProcessedStock: string | null,
-    config: WorkerConfig
+    config: WorkerConfig,
   ): Promise<number> {
-    let index = lastProcessedStock 
-      ? stocks.findIndex(stock => stock.symbol === lastProcessedStock) + 1
+    let index = lastProcessedStock
+      ? stocks.findIndex((stock) => stock.symbol === lastProcessedStock) + 1
       : 0;
-    
+
     let processedCount = 0;
     const errors: Array<{ symbol: string; error: string }> = [];
+    const processedSymbols = new Set<string>();
 
     const processStock = async (stock: StockWithMarketCode) => {
+      // Skip if we've already processed this symbol in this batch
+      const symbolKey = `${stock.symbol}_${stock.market_code}`;
+      if (processedSymbols.has(symbolKey)) {
+        logger.info(
+          `Skipping duplicate stock ${stock.symbol} for market ${stock.market_code}`,
+        );
+        return;
+      }
+
       try {
         await this.retryWithBackoff(async () => {
-          const processedData = await this.financialFetch.fetchStockFinancials(stock.symbol);
+          const processedData = await this.financialFetch.fetchStockFinancials(
+            stock.symbol,
+          );
           if (processedData && processedData.length > 0) {
+            const latestData = processedData[0];
+            // Validate the financial data before proceeding
+            if (!latestData) {
+              throw new Error(
+                `No valid financial data found for ${stock.symbol}`,
+              );
+            }
+
+            // Create financial data with proper structure matching StockFinancialResponse
             const financialData: StockFinancialResponse = {
-              nodes: [{ data: processedData }],
+              nodes: [{ data: [latestData] }], // Wrap latestData in array as per interface
               report_date: new Date().toISOString(),
-              fiscal_quarter: processedData[0].fiscalQuarter,
-              fiscal_year: processedData[0].fiscalYear,
-              revenue: processedData[0].revenue,
-              revenue_growth: processedData[0].revenueGrowth,
-              operating_income: processedData[0].operatingIncome,
-              interest_expense: processedData[0].interestExpense,
-              net_income: processedData[0].netIncome,
-              eps_basic: processedData[0].epsBasic,
-              eps_diluted: processedData[0].epsDiluted,
-              free_cash_flow: processedData[0].freeCashFlow,
-              profit_margin: processedData[0].profitMargin,
-              total_operating_expenses: processedData[0].totalOperatingExpenses,
+              fiscal_quarter: latestData.fiscalQuarter ?? undefined,
+              fiscal_year: latestData.fiscalYear ?? undefined,
+              revenue: latestData.revenue ?? undefined,
+              revenue_growth: latestData.revenueGrowth ?? undefined,
+              operating_income: latestData.operatingIncome ?? undefined,
+              interest_expense: latestData.interestExpense ?? undefined,
+              net_income: latestData.netIncome ?? undefined,
+              eps_basic: latestData.epsBasic ?? undefined,
+              eps_diluted: latestData.epsDiluted ?? undefined,
+              free_cash_flow: latestData.freeCashFlow ?? undefined,
+              profit_margin: latestData.profitMargin ?? undefined,
+              total_operating_expenses:
+                latestData.totalOperatingExpenses ?? undefined,
             };
+
+            // Enhanced validation before saving
+            if (!financialData.fiscal_quarter || !financialData.fiscal_year) {
+              logger.warn(
+                `Missing required fiscal data for ${stock.symbol}, skipping save`,
+              );
+              return;
+            }
+
+            // Log data validation for debugging
+            logger.debug(
+              `Validated financial data for ${stock.symbol}: ` +
+                `Q${financialData.fiscal_quarter || 'N/A'} ` +
+                `FY${financialData.fiscal_year || 'N/A'}`,
+            );
+
             await this.financialFetch.saveFinancialData(financialData, stock);
             processedCount++;
+            // Mark this symbol as processed
+            processedSymbols.add(symbolKey);
             logger.info(`Successfully processed ${stock.symbol}`);
           }
         }, stock);
       } catch (error) {
-        errors.push({ 
-          symbol: stock.symbol, 
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
-        logger.error(`Failed to process ${stock.symbol}`, error);
+        // Only log non-duplicate errors as actual errors
+        if (!error.message?.includes('E11000 duplicate key error')) {
+          errors.push({
+            symbol: stock.symbol,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+          logger.error(`Failed to process ${stock.symbol}`, error);
+        } else {
+          // Log duplicate as info
+          logger.info(
+            `Skipped duplicate stock ${stock.symbol} for market ${stock.market_code}`,
+          );
+        }
       }
     };
 
@@ -140,13 +201,13 @@ export class WorkerPoolService {
       while (queue.length > 0) {
         // Process in chunks to prevent memory buildup
         const chunk = queue.splice(0, CHUNK_SIZE);
-        
+
         for (const stock of chunk) {
           // Wait if we've reached max concurrent requests
           while (activeWorkers.size >= config.maxConcurrentRequests) {
             await Promise.race(Array.from(activeWorkers));
           }
-          
+
           // Clean up completed workers
           for (const worker of activeWorkers) {
             // Remove completed promises
@@ -159,7 +220,7 @@ export class WorkerPoolService {
           const workerPromise = processStock(stock).finally(() => {
             activeWorkers.delete(workerPromise);
           });
-          
+
           // Add to active workers set
           activeWorkers.add(workerPromise);
         }
@@ -167,7 +228,7 @@ export class WorkerPoolService {
         // Allow GC to clean up processed chunk
         global.gc?.();
       }
-      
+
       // Wait for remaining workers in chunk to complete
       if (activeWorkers.size > 0) {
         await Promise.all(Array.from(activeWorkers));
@@ -179,21 +240,21 @@ export class WorkerPoolService {
     await Promise.all(
       Array(config.maxConcurrentRequests)
         .fill(null)
-        .map(() => worker())
+        .map(() => worker()),
     );
-    
+
     // Log summary of processing
     if (errors.length > 0) {
       logger.warn(
-        `Processing completed with ${errors.length} errors:\n${JSON.stringify(errors, null, 2)}`
+        `Processing completed with ${errors.length} errors:\n${JSON.stringify(errors, null, 2)}`,
       );
     }
-    
+
     return processedCount;
   }
 
   static async sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 
@@ -207,3 +268,4 @@ export class WorkerPoolService {
 // TODO: Add support for priority-based processing
 // TODO: Consider implementing dead letter queue for failed items
 // TODO: Add support for custom retry policies per stock/exchange
+// TODO: Add support for tracking and handling duplicate stocks across exchanges

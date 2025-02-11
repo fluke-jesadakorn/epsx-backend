@@ -1,7 +1,9 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { AiServiceService } from './ai-service.service';
 import { AiQueryDto } from './dto/ai-query.dto';
+import { ChatQueryDto } from './dto/chat-query.dto';
 import { AiQueryResponse } from './types/index';
+import { AIMessage } from './schema/ai-provider.schema';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 
 @ApiTags('Natural Language Queries')
@@ -174,5 +176,82 @@ Query Examples:
     @Body() queryDto: AiQueryDto,
   ): Promise<AiQueryResponse> {
     return this.aiServiceService.processQuery(queryDto);
+  }
+
+  @Post('chat')
+  @ApiOperation({
+    summary: 'Process chat messages with AI',
+    description: 'Handle conversational interactions with the AI model'
+  })
+  @ApiBody({
+    type: ChatQueryDto,
+    examples: {
+      basicChat: {
+        summary: 'Basic Chat Query',
+        description: 'Simple chat interaction',
+        value: {
+          messages: [
+            {
+              role: 'user',
+              content: 'What are the latest financial metrics for Apple?'
+            }
+          ]
+        }
+      },
+      conversationChat: {
+        summary: 'Conversation Chat Query',
+        description: 'Multi-turn conversation with context',
+        value: {
+          messages: [
+            {
+              role: 'system',
+              content: 'Focus on financial analysis and market trends.'
+            },
+            {
+              role: 'user',
+              content: 'Compare the revenue growth of Apple and Microsoft'
+            }
+          ],
+          options: {
+            temperature: 0.7
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Chat message processed successfully',
+    schema: {
+      type: 'object',
+      required: ['role', 'content'],
+      properties: {
+        role: {
+          type: 'string',
+          enum: ['assistant'],
+          example: 'assistant'
+        },
+        content: {
+          type: 'string',
+          description: 'AI-generated response',
+          example: 'Based on the latest financial data, Apple reported...'
+        }
+      }
+    }
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid message format',
+    schema: {
+      type: 'object',
+      properties: {
+        statusCode: { type: 'number', example: 400 },
+        message: { type: 'string', example: 'Invalid message format' },
+        error: { type: 'string', example: 'Bad Request' }
+      }
+    }
+  })
+  async chat(@Body() chatDto: ChatQueryDto): Promise<AIMessage> {
+    return this.aiServiceService.handleChat(chatDto);
   }
 }

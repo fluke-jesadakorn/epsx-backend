@@ -10,7 +10,7 @@ export const AI_PROVIDER_CONFIG: Record<string, Partial<AIProviderConfig>> = {
   },
   openrouter: {
     baseURL: 'https://openrouter.ai/api/v1',
-    model: 'deepseek/deepseek-r1:free',
+    model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-r1:free',
     timeout: 30000,
     maxRetries: 3,
     headers: {

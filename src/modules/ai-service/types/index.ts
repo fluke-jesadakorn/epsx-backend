@@ -1,20 +1,8 @@
-/**
- * Type definitions for AI service module
- */
+import { AiQueryResponse } from '../../../types';
 
-export interface AiQueryResponse {
-  success: boolean;
-  data: any[];
-  analysis: string;
-  meta: {
-    executionTime: number;
-    timestamp: string;
-  };
-}
+// Re-export the type from centralized location
+export type { AiQueryResponse };
 
-/**
- * Future enhancements:
- * TODO: Add types for export formats (CSV, Excel)
- * TODO: Add types for advanced visualization options
- * TODO: Add types for custom query templates
- */
+// TODO: Add service-specific type extensions
+// TODO: Add custom type guards
+// TODO: Add type utilities for AI service operations
