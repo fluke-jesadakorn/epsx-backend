@@ -12,7 +12,7 @@ import { FetchStateService } from './services/fetch-state.service';
 import { FinancialFetchService } from './services/financial-fetch.service';
 import { FinancialDataService } from './services/financial-data.service';
 import { WorkerPoolService } from './services/worker-pool.service';
-import { Exchange, ExchangeSchema } from 'src/database/schemas/exchange.schema';
+import { Exchange, ExchangeSchema } from '../../database/schemas/exchange.schema';
 
 @Module({
   imports: [
