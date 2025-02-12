@@ -21,7 +21,6 @@ RUN bun install --production \
 
 # Copy over the built application
 COPY --from=builder /app/dist ./dist
-COPY .env.production .env
 
 # NOTE: In production environment, it's recommended to use environment variables
 # instead of .env files for better security. The .env file copying is included
