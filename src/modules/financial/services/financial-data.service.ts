@@ -20,8 +20,6 @@ export class FinancialDataService {
     private financialModel: Model<Financial>,
     @InjectModel(Stock.name)
     private stockModel: Model<Stock>,
-    @InjectModel(Exchange.name)
-    private exchangeModel: Model<Exchange>,
   ) {}
 
   async getStocksBatch(
