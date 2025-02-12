@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { HttpModule } from './common/http/http.module';
 import { ExchangeModule } from './modules/exchange/exchange.module';
 import { StockModule } from './modules/stock/stock.module';
@@ -8,16 +8,20 @@ import { ConfigModule } from '@nestjs/config';
 import { HealthCheckModule } from './modules/health-check/health-check.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { AiServiceModule } from './modules/ai-service/ai-service.module';
+import { initializeFirebase } from './config/firebase.config';
+
 /**
  * Main application module that configures:
  * - Environment variables and configuration
  * - Database connection with MongoDB
+ * - Firebase initialization and integration
  * - Feature modules (Exchange, Stock, Financial)
  * - Supporting modules (Auth, Gateway, Health Check)
  *
  * Required Environment Variables:
  * - MONGODB_URL: MongoDB connection string
  * - NODE_ENV: Runtime environment (development/production)
+ * - FIREBASE_* variables: Firebase configuration (see .env.example)
  *
  * TODO: Future Improvements:
  * MongoDB:
@@ -52,4 +56,9 @@ import { AiServiceModule } from './modules/ai-service/ai-service.module';
     AiServiceModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements OnModuleInit {
+  onModuleInit() {
+    // Initialize Firebase when the application starts
+    initializeFirebase();
+  }
+}

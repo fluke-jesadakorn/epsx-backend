@@ -1,11 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, PipelineStage } from 'mongoose';
+import { Model } from 'mongoose';
 import { Financial } from '../../../database/schemas/financial.schema';
 import { Stock } from '../../../database/schemas/stock.schema';
 import { StockWithMarketCode, EPSGrowthData } from '../../../types';
 import { logger } from '../../../utils/logger';
-import { Exchange } from 'src/database/schemas/exchange.schema';
 import {
   getEPSGrowthPipeline,
   getEPSGrowthCountPipeline,
