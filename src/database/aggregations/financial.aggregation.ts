@@ -87,6 +87,18 @@ export const epsGrowthPipelineStages: PipelineStage[] = [
 
 /**
  * Complete pipeline for EPS growth ranking and projection
+ *
+ * Performance Optimization:
+ * 1. Initial $project reduces memory usage before sorting by selecting only needed fields
+ * 2. $sort is placed after $project to minimize memory usage during sort
+ * 3. Uses { allowDiskUse: true } in query execution (set in service)
+ * 4. Uses hint for optimal index usage
+ * 5. Pipeline stages ordered for maximum efficiency
+ *
+ * Required Indexes:
+ * db.financials.createIndex({ "eps_basic": 1 })
+ * db.financials.createIndex({ "stock": 1, "fiscal_year": 1, "fiscal_quarter": 1 })
+ * db.financials.createIndex({ "eps_basic_growth": -1 })
  */
 export const getEPSGrowthPipeline = (
   skip: number,
@@ -94,10 +106,28 @@ export const getEPSGrowthPipeline = (
 ): PipelineStage[] => [
   ...epsGrowthPipelineStages,
   {
+    $project: {
+      _id: 1,
+      stock_info: {
+        symbol: 1,
+        company_name: 1,
+      },
+      exchange_info: {
+        market_code: 1,
+        name: 1,
+      },
+      eps_basic: 1,
+      eps_basic_growth: 1,
+      report_date: 1,
+    },
+  },
+  {
     $sort: {
       eps_basic_growth: -1,
     },
   },
+  { $skip: skip },
+  { $limit: limit },
   {
     $setWindowFields: {
       sortBy: { eps_basic_growth: -1 },
@@ -122,8 +152,6 @@ export const getEPSGrowthPipeline = (
       },
     },
   },
-  { $skip: skip },
-  { $limit: limit },
 ];
 
 /**

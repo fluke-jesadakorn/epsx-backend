@@ -88,6 +88,7 @@ export class FinancialDataService {
       // Get EPS growth data using global aggregation pipeline
       const pipeline = getEPSGrowthPipeline(validSkip, validLimit);
 
+      // Index optimization is handled by schema definition
       const results = await this.financialModel
         .aggregate<EPSAggregationResult>(pipeline)
         .allowDiskUse(true)
