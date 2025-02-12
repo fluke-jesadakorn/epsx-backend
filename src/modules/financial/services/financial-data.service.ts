@@ -81,6 +81,7 @@ export class FinancialDataService {
       const countPipeline = getEPSGrowthCountPipeline();
       const totalResult = await this.financialModel
         .aggregate(countPipeline)
+        .allowDiskUse(true)
         .exec();
       const total = totalResult[0]?.total || 0;
 
@@ -89,6 +90,7 @@ export class FinancialDataService {
 
       const results = await this.financialModel
         .aggregate<EPSAggregationResult>(pipeline)
+        .allowDiskUse(true)
         .exec();
 
       /**
