@@ -1,10 +1,12 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { MessagePattern } from '@nestjs/microservices';
 import { HttpService } from '../../common/http/http.service';
 import { StockScreenerResponse } from '../../types/stock-analysis.types';
 import { logger } from '../../utils/logger';
@@ -21,6 +23,8 @@ async function sleep(ms: number): Promise<void> {
 
 @Injectable()
 export class StockService {
+  private readonly logger = new Logger(StockService.name);
+
   constructor(
     @InjectModel(Stock.name)
     private stockModel: Model<Stock>,
@@ -32,6 +36,7 @@ export class StockService {
   /**
    * Get all stocks with pagination
    */
+  @MessagePattern({ cmd: 'get_all_stocks' })
   @Paginate()
   async getAllStocks(params: PaginationParams = {}) {
     const { skip, take } = getPaginationOptions(params);
@@ -45,6 +50,7 @@ export class StockService {
   /**
    * Get stocks by exchange with pagination
    */
+  @MessagePattern({ cmd: 'get_stocks_by_exchange' })
   @Paginate()
   async getStocksByExchange(exchangeId: string, params: PaginationParams = {}) {
     if (!exchangeId) {
@@ -64,7 +70,9 @@ export class StockService {
     return { data, total };
   }
 
+  @MessagePattern('scrape_stocks')
   async saveStockData() {
+    this.logger.log('Starting stock data scraping process');
     const existingExchanges = await this.exchangeModel.find().exec();
 
     try {
@@ -77,14 +85,14 @@ export class StockService {
           i,
           i + config.app.stock.maxParallelRequests,
         );
-        logger.info(
+        this.logger.log(
           `Processing batch ${Math.floor(i / config.app.stock.maxParallelRequests) + 1} of ${Math.ceil(existingExchanges.length / config.app.stock.maxParallelRequests)}`,
         );
 
         // Process each exchange in the batch concurrently
         const batchPromises = batch.map(async (e) => {
           if (!e._id) {
-            logger.error(`Exchange ${e.market_code} has no ID`);
+            this.logger.error(`Exchange ${e.market_code} has no ID`);
             return;
           }
 
@@ -94,13 +102,13 @@ export class StockService {
             );
 
           if (!stockData) {
-            logger.error(`Failed to fetch data for exchange ${e.market_code}`);
+            this.logger.error(`Failed to fetch data for exchange ${e.market_code}`);
             throw new NotFoundException('Failed to fetch stock data');
           }
 
           // Validate data structure and extract stocks array
           if (!stockData.data?.data) {
-            logger.error(
+            this.logger.error(
               `Invalid data structure received for exchange ${e.market_code}`,
             );
             throw new NotFoundException(
@@ -112,7 +120,7 @@ export class StockService {
 
           const totalStocks =
             stockData.data.resultsCount || stocksToProcess.length;
-          logger.info(`Retrieved ${totalStocks} stocks for ${e.market_code}`);
+          this.logger.log(`Retrieved ${totalStocks} stocks for ${e.market_code}`);
 
           let processedCount = 0;
 
@@ -150,59 +158,37 @@ export class StockService {
               }));
 
             // Bulk insert new stocks
-if (newStocks.length > 0) {
-  try {
-    // Update exchange document to include new stock references
-    const createdStocks = await this.stockModel.create(newStocks);
-    
-    // Update exchange document with the new stock references
-    await this.exchangeModel.findByIdAndUpdate(
-      e._id,
-      {
-        $push: {
-          stocks: {
-            $each: createdStocks.map(stock => stock._id)
-          }
-        }
-      },
-      { new: true }
-    );
+            if (newStocks.length > 0) {
+              try {
+                // Update exchange document to include new stock references
+                const createdStocks = await this.stockModel.create(newStocks);
+                
+                // Update exchange document with the new stock references
+                await this.exchangeModel.findByIdAndUpdate(
+                  e._id,
+                  {
+                    $push: {
+                      stocks: {
+                        $each: createdStocks.map(stock => stock._id)
+                      }
+                    }
+                  },
+                  { new: true }
+                );
 
-    logger.info(`Inserted ${newStocks.length} new stocks and updated exchange references`);
-
-    /**
-     * TODO: Future Improvements
-     * 1. Add atomic transactions for consistent data
-     * 2. Implement bulk operations for better performance
-     * 3. Add validation for duplicate stock references
-     * 4. Add cascade delete functionality
-     * 5. Implement periodic reference integrity checks
-     * 6. Add batch size configuration for reference updates
-     * 7. Implement rollback mechanism for failed operations
-     * 8. Add caching for frequently accessed relationships
-     * 9. Implement query optimization for relationship lookups
-     * 10. Add monitoring for relationship health metrics
-     */
-  } catch (error) {
-    logger.error(`Failed to insert stocks batch: ${error.message}`);
-    // TODO: Add rollback mechanism for partial failures
-  }
-}
+                this.logger.log(`Inserted ${newStocks.length} new stocks and updated exchange references`);
+              } catch (error) {
+                this.logger.error(`Failed to insert stocks batch: ${error.message}`);
+              }
+            }
 
             processedCount += stockBatch.length;
-            logger.info(
+            this.logger.log(
               `Processed ${stockBatch.length} stocks in batch (${newStocks.length} new)`,
             );
           }
 
-          // TODO: Future improvements
-          // 1. Implement retry mechanism for failed batches
-          // 2. Add data validation before saving
-          // 3. Add upsert functionality to update existing stock data
-          // 4. Implement real-time progress tracking
-          // 5. Add cleanup for orphaned stock records
-
-          logger.info(
+          this.logger.log(
             `Exchange ${e.exchange_name} processing completed. Processed ${processedCount} stocks.`,
           );
         });
@@ -213,16 +199,18 @@ if (newStocks.length > 0) {
           i + config.app.stock.maxParallelRequests <
           existingExchanges.length
         ) {
-          logger.info(
+          this.logger.log(
             `Waiting ${config.app.stock.batchDelay}ms before processing next batch...`,
           );
           await sleep(config.app.stock.batchDelay);
         }
       }
 
-      logger.info('All batches have been processed successfully.');
+      this.logger.log('All batches have been processed successfully.');
+      return { success: true, message: 'Stock data processing completed' };
     } catch (error) {
-      logger.error('Fatal error during stock data processing');
+      this.logger.error('Fatal error during stock data processing:', error);
+      throw error;
     }
   }
 }

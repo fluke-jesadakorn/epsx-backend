@@ -1,5 +1,28 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { CommonEntitySwagger } from './common.swagger';
+import { StockSwagger } from './stock.swagger';
+
+export const ExchangeResponseExample = {
+  _id: '507f1f77bcf86cd799439013',
+  market_code: 'NYSE',
+  name: 'New York Stock Exchange',
+  country: 'United States',
+  timezone: 'America/New_York',
+  open_time: '09:30',
+  close_time: '16:00',
+  active: true,
+  description: 'The New York Stock Exchange is the largest securities exchange in the world.',
+  stocks: [
+    {
+      _id: '507f1f77bcf86cd799439012',
+      symbol: 'AAPL',
+      company_name: 'Apple Inc.'
+    }
+  ],
+  version: 1,
+  createdAt: '2024-02-09T09:00:00Z',
+  updatedAt: '2024-02-09T10:00:00Z'
+};
 
 export class ExchangeSwagger extends CommonEntitySwagger {
   @ApiProperty({
@@ -60,8 +83,15 @@ export class ExchangeSwagger extends CommonEntitySwagger {
 
   @ApiProperty({
     description: 'List of stocks listed on this exchange',
-    type: () => 'Stock[]',
-    required: false
+    type: () => [StockSwagger],
+    required: false,
+    example: [{
+      _id: '507f1f77bcf86cd799439012',
+      symbol: 'AAPL',
+      company_name: 'Apple Inc.'
+    }]
   })
-  stocks?: any[];
+  stocks?: StockSwagger[];
+
+  static example = ExchangeResponseExample;
 }

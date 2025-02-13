@@ -8,6 +8,11 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "bun dist/src/main.js",
+    "start:health": "bun src/modules/health-check/health-check.microservice.ts",
+    "start:logging": "bun src/modules/logging/logging.bootstrap.ts",
+    "start:stock": "bun src/modules/stock/stock.microservice.ts",
+    "start:exchange": "bun src/modules/exchange/exchange.microservice.ts",
+    "start:all": "concurrently \"bun run start:health\" \"bun run start:logging\" \"bun run start:stock\" \"bun run start:exchange\" \"bun run start:dev\"",
     "lint": "eslint '{src,apps,libs,test}/**/*.ts' --fix"
   },
   "devDependencies": {
@@ -39,11 +44,13 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.23.0"
+    "typescript-eslint": "^8.23.0",
+    "concurrently": "^8.2.2"
   },
   "dependencies": {
     "@langchain/community": "^0.3.29",
     "@langchain/openai": "^0.4.3",
+    "@nestjs/axios": "^4.0.0",
     "@nestjs/common": "^11.0.8",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.8",

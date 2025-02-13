@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { HealthCheckModule } from './modules/health-check/health-check.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { AiServiceModule } from './modules/ai-service/ai-service.module';
+import { LoggingModule } from './modules/logging/logging.module';
 import { initializeFirebase } from './config/firebase.config';
 
 /**
@@ -16,7 +17,7 @@ import { initializeFirebase } from './config/firebase.config';
  * - Database connection with MongoDB
  * - Firebase initialization and integration
  * - Feature modules (Exchange, Stock, Financial)
- * - Supporting modules (Auth, Gateway, Health Check)
+ * - Supporting modules (Auth, Gateway, Health Check, Logging)
  *
  * Required Environment Variables:
  * - MONGODB_URL: MongoDB connection string
@@ -48,6 +49,7 @@ import { initializeFirebase } from './config/firebase.config';
     }),
     DatabaseModule,
     HttpModule,
+    LoggingModule,
     ExchangeModule,
     StockModule,
     FinancialModule,

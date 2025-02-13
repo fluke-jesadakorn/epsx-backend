@@ -16,6 +16,7 @@ class Logger {
     const timestamp = config.logger.timestamp ? `[${this.getTimestamp()}]` : '';
     const colorCode = config.logger.colors[level.toLowerCase()] || '';
     const formattedLevel = `[${level.toUpperCase()}]`;
+    const servicePrefix = `[${config.logger.serviceName}:${config.port}]`;
     const contextStr = context ? `[${context}] ` : '';
 
     let formattedMessage: string;
@@ -25,7 +26,7 @@ class Logger {
       formattedMessage = message;
     }
 
-    return `${timestamp}${colorCode}${formattedLevel} ${contextStr}${formattedMessage}`;
+    return `${timestamp}${colorCode}${formattedLevel}${servicePrefix} ${contextStr}${formattedMessage}`;
   }
 
   error(message: string | Error, context?: string): void {

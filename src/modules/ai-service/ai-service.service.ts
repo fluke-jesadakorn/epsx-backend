@@ -131,10 +131,13 @@ export class AiServiceService {
 
   /**
    * Future enhancements:
+   * TODO: Implement rate limiting and request throttling
    * TODO: Add support for caching frequent queries
    * TODO: Add support for real-time data updates
    * TODO: Add support for export formats (CSV, Excel)
    * TODO: Add support for advanced visualization options
    * TODO: Add support for custom query templates
+   * TODO: Implement request queueing for high-load scenarios
+   * TODO: Add usage tracking and quota management
    */
 }

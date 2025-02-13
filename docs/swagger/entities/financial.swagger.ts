@@ -1,5 +1,66 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, getSchemaPath } from '@nestjs/swagger';
 import { CommonEntitySwagger } from './common.swagger';
+import { StockSwagger } from './stock.swagger';
+
+export const FinancialResponseExample = {
+  _id: '507f1f77bcf86cd799439011',
+  revenue: 100000000,
+  revenue_growth: 0.15,
+  operations_maintenance: 30000000,
+  selling_general_admin: 20000000,
+  depreciation_amortization: 5000000,
+  goodwill_amortization: 1000000,
+  bad_debts_provision: 500000,
+  other_operating_expenses: 2000000,
+  total_operating_expenses: 58500000,
+  operating_income: 41500000,
+  interest_expense: 2000000,
+  interest_income: 500000,
+  net_interest_expense: 1500000,
+  equity_investments_income: 1000000,
+  currency_exchange_gain: -500000,
+  other_non_operating_income: 300000,
+  ebt_excluding_unusual: 40800000,
+  gain_on_sale_investments: 1000000,
+  gain_on_sale_assets: 500000,
+  asset_writedown: -2000000,
+  insurance_settlements: 0,
+  other_unusual_items: -500000,
+  pretax_income: 39800000,
+  income_tax_expense: 8000000,
+  earnings_continuing_ops: 31800000,
+  minority_interest: 1000000,
+  net_income: 30800000,
+  net_income_common: 30800000,
+  net_income_growth: 0.12,
+  shares_basic: 1000000000,
+  shares_diluted: 1050000000,
+  eps_basic: 30.8,
+  eps_diluted: 29.33,
+  eps_growth: 0.10,
+  free_cash_flow: 25000000,
+  free_cash_flow_per_share: 25.0,
+  dividend_per_share: 0.88,
+  profit_margin: 0.308,
+  free_cash_flow_margin: 0.25,
+  ebitda: 46500000,
+  ebitda_margin: 0.465,
+  depreciation_amortization_ebitda: 5000000,
+  ebit: 41500000,
+  ebit_margin: 0.415,
+  effective_tax_rate: 0.201,
+  report_date: '2024-12-31T00:00:00.000Z',
+  fiscal_quarter: 4,
+  fiscal_year: 2024,
+  stocks: {
+    _id: '507f1f77bcf86cd799439012',
+    symbol: 'AAPL',
+    company_name: 'Apple Inc.'
+  },
+  version: 1,
+  createdAt: '2024-02-09T09:00:00Z',
+  updatedAt: '2024-02-09T10:00:00Z'
+};
 
 export class FinancialSwagger extends CommonEntitySwagger {
   @ApiProperty({
@@ -342,8 +403,15 @@ export class FinancialSwagger extends CommonEntitySwagger {
 
   @ApiProperty({
     description: 'Associated stock',
-    type: () => 'Stock',
-    required: true
+    type: () => StockSwagger,
+    required: true,
+    example: {
+      _id: '507f1f77bcf86cd799439012',
+      symbol: 'AAPL',
+      company_name: 'Apple Inc.'
+    }
   })
-  stocks: any;
+  stocks: StockSwagger;
+
+  static example = FinancialResponseExample;
 }

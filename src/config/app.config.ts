@@ -28,6 +28,7 @@ export interface AppConfig {
     colors: Record<string, string>;
     timestamp: boolean;
     debug: boolean;
+    serviceName?: string;
   };
   http: {
     maxRetries: number;
@@ -110,6 +111,7 @@ For more information, visit our repository or contact the development team.
       },
       timestamp: process.env.LOG_TIMESTAMP !== 'false',
       debug: process.env.LOG_DEBUG === 'true',
+      serviceName: process.env.SERVICE_NAME || 'investing-scrape-data',
     },
     http: {
       maxRetries: Number(process.env.HTTP_MAX_RETRIES) || 3,

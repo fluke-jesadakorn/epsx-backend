@@ -1,5 +1,39 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { CommonEntitySwagger } from './common.swagger';
+import { ExchangeSwagger } from './exchange.swagger';
+import { FinancialSwagger } from './financial.swagger';
+
+export const StockMetadataExample = {
+  website: 'https://www.apple.com',
+  description: 'Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories.',
+  employees: 154000,
+  founded: 1976,
+  ceo: 'Tim Cook',
+  headquarters: 'Cupertino, California, USA'
+};
+
+export const StockResponseExample = {
+  _id: '507f1f77bcf86cd799439012',
+  symbol: 'AAPL',
+  company_name: 'Apple Inc.',
+  sector: 'Technology',
+  metadata: StockMetadataExample,
+  primary_exchange_market_code: 'NASDAQ',
+  exchanges: {
+    _id: '507f1f77bcf86cd799439013',
+    market_code: 'NASDAQ',
+    name: 'NASDAQ Stock Market'
+  },
+  financials: [{
+    _id: '507f1f77bcf86cd799439011',
+    revenue: 100000000,
+    fiscal_quarter: 4,
+    fiscal_year: 2024
+  }],
+  version: 1,
+  createdAt: '2024-02-09T09:00:00Z',
+  updatedAt: '2024-02-09T10:00:00Z'
+};
 
 export class StockMetadataSwagger {
   @ApiProperty({
@@ -8,6 +42,8 @@ export class StockMetadataSwagger {
     required: false
   })
   website?: string;
+
+  static example = StockMetadataExample;
 
   @ApiProperty({
     description: 'Company description',
@@ -83,15 +119,28 @@ export class StockSwagger extends CommonEntitySwagger {
 
   @ApiProperty({
     description: 'Exchange where the stock is listed',
-    type: () => 'Exchange',
-    required: true
+    type: () => ExchangeSwagger,
+    required: true,
+    example: {
+      _id: '507f1f77bcf86cd799439013',
+      market_code: 'NASDAQ',
+      name: 'NASDAQ Stock Market'
+    }
   })
-  exchanges: any;
+  exchanges: ExchangeSwagger;
 
   @ApiProperty({
     description: 'Financial reports for this stock',
-    type: () => 'Financial[]',
-    required: false
+    type: () => [FinancialSwagger],
+    required: false,
+    example: [{
+      _id: '507f1f77bcf86cd799439011',
+      revenue: 100000000,
+      fiscal_quarter: 4,
+      fiscal_year: 2024
+    }]
   })
-  financials?: any[];
+  financials?: FinancialSwagger[];
+
+  static example = StockResponseExample;
 }
