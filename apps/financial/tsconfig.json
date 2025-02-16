@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "outDir": "../../dist/apps/financial",
+    "composite": true,
+    "rootDir": "src",
+    "baseUrl": "./"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"],
+  "paths": {
+    "@investing/common": ["../../libs/common/src"],
+    "@investing/common/*": ["../../libs/common/src/*"]
+  }
+}

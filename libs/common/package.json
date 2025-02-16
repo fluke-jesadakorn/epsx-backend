@@ -1,0 +1,29 @@
+{
+  "name": "@investing/common",
+  "version": "1.0.0",
+  "description": "Common utilities and types for EPSX Backend",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "nest start --watch",
+    "start": "nest start",
+    "build": "nest build",
+    "clean": "rimraf dist"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.0.8",
+    "mongoose": "^8.10.0",
+    "typescript": "^5.7.3"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.0.8",
+    "mongoose": "^8.10.0"
+  }
+}

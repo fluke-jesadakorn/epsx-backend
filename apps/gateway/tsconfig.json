@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "outDir": "../../dist/apps/gateway",
+    "composite": true,
+    "baseUrl": "../../",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "paths": {
+      "@investing/common": ["libs/common/src"],
+      "@investing/common/*": ["libs/common/src/*"]
+    }
+  },
+  "include": ["src/**/*", "../../libs/common/src/**/*"],
+  "references": [
+    { "path": "../../libs/common" }
+  ],
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+}

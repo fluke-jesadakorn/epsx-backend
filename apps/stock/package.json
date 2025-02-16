@@ -1,0 +1,26 @@
+{
+  "name": "@investing/stock",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "start": "nest start",
+    "start:dev": "nest start --watch"
+  },
+  "dependencies": {
+    "@investing/common": "*",
+    "@nestjs/common": "^11.0.8",
+    "@nestjs/config": "^4.0.0",
+    "@nestjs/core": "^11.0.8",
+    "@nestjs/microservices": "^11.0.8",
+    "@nestjs/mongoose": "^11.0.1",
+    "@nestjs/swagger": "^11.0.3",
+    "mongoose": "^8.10.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "typescript": "^5.7.3"
+  }
+}

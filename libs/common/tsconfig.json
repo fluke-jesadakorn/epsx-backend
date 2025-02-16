@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "outDir": "./dist",
+    "composite": true,
+    "rootDir": "src",
+    "baseUrl": "./src",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "esModuleInterop": true,
+    "paths": {
+      "@investing/common": ["."],
+      "@investing/common/*": ["./*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+}
