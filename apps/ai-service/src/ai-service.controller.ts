@@ -6,18 +6,18 @@ import { AiQueryDto } from './dto/ai-query.dto';
 import { ChatQueryDto } from './dto/chat-query.dto';
 import { AiQueryResponse } from './types/ai.types';
 import { AIMessage } from './schema/ai-provider.schema';
-import { 
-  AiQueryRequestExample, 
+import {
+  AiQueryRequestExample,
   AiChatRequestExample,
   ApiQueryFeatures,
   AiQueryResponseSchema,
   AiChatResponseSchema,
-  ErrorResponseSchema 
+  ErrorResponseSchema,
 } from './swagger/ai-service.swagger';
 
 /**
  * Controller for AI-powered natural language processing of financial data
- * 
+ *
  * Future Features:
  * TODO: Add support for real-time market data analysis
  * TODO: Implement sentiment analysis for news and social media
@@ -39,10 +39,24 @@ export class AiServiceController {
     description: ApiQueryFeatures,
   })
   @ApiBody({ type: AiQueryDto, examples: AiQueryRequestExample.examples })
-  @ApiResponse({ status: 200, description: 'Query processed successfully', schema: AiQueryResponseSchema })
-  @ApiResponse({ status: 400, description: 'Bad request - Query processing failed', schema: ErrorResponseSchema })
-  @ApiResponse({ status: 500, description: 'Internal server error', schema: ErrorResponseSchema })
-  async processQuery(@Payload() queryDto: AiQueryDto): Promise<AiQueryResponse> {
+  @ApiResponse({
+    status: 200,
+    description: 'Query processed successfully',
+    schema: AiQueryResponseSchema,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Query processing failed',
+    schema: ErrorResponseSchema,
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Internal server error',
+    schema: ErrorResponseSchema,
+  })
+  async processQuery(
+    @Payload() queryDto: AiQueryDto,
+  ): Promise<AiQueryResponse> {
     return this.aiServiceService.processQuery(queryDto);
   }
 
@@ -52,8 +66,16 @@ export class AiServiceController {
     description: 'Handle conversational interactions with the AI model',
   })
   @ApiBody({ type: ChatQueryDto, examples: AiChatRequestExample.examples })
-  @ApiResponse({ status: 200, description: 'Chat message processed successfully', schema: AiChatResponseSchema })
-  @ApiResponse({ status: 400, description: 'Bad request - Invalid message format', schema: ErrorResponseSchema })
+  @ApiResponse({
+    status: 200,
+    description: 'Chat message processed successfully',
+    schema: AiChatResponseSchema,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - Invalid message format',
+    schema: ErrorResponseSchema,
+  })
   async chat(@Payload() chatDto: ChatQueryDto): Promise<AIMessage> {
     return this.aiServiceService.handleChat(chatDto);
   }

@@ -1,7 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ClientProxy } from '@nestjs/microservices';
 import { AiController } from '../ai.controller';
-import { AIQueryDto, ChatQueryDto, AIResponseDto, ChatResponseDto } from '@investing/common';
+import {
+  AIQueryDto,
+  ChatQueryDto,
+  AIResponseDto,
+  ChatResponseDto,
+} from '@investing/common';
 import { of, throwError } from 'rxjs';
 
 describe('AiController', () => {
@@ -40,7 +45,7 @@ describe('AiController', () => {
         dataType: 'price',
       },
       max_tokens: 100,
-      temperature: 0.7
+      temperature: 0.7,
     };
 
     const mockResponse: AIResponseDto = {
@@ -48,9 +53,9 @@ describe('AiController', () => {
       usage: {
         prompt_tokens: 20,
         completion_tokens: 15,
-        total_tokens: 35
+        total_tokens: 35,
       },
-      model: 'gpt-4'
+      model: 'gpt-4',
     };
 
     it('should successfully process a query', async () => {
@@ -101,26 +106,26 @@ describe('AiController', () => {
       messages: [
         {
           role: 'user',
-          content: 'Tell me about market trends'
-        }
+          content: 'Tell me about market trends',
+        },
       ],
       market_context: {
-        timeframe: '1d'
+        timeframe: '1d',
       },
-      max_tokens: 100
+      max_tokens: 100,
     };
 
     const mockResponse: ChatResponseDto = {
       message: {
         role: 'assistant',
-        content: 'The market is showing bullish trends'
+        content: 'The market is showing bullish trends',
       },
       usage: {
         prompt_tokens: 25,
         completion_tokens: 20,
-        total_tokens: 45
+        total_tokens: 45,
       },
-      model: 'gpt-4'
+      model: 'gpt-4',
     };
 
     it('should successfully process a chat message', async () => {

@@ -6,15 +6,13 @@
     "composite": true,
     "baseUrl": "../../",
     "module": "CommonJS",
-    "moduleResolution": "Node",
-    "paths": {
-      "@investing/common": ["libs/common/src"],
-      "@investing/common/*": ["libs/common/src/*"]
-    }
+    "rootDir": "src",
+    "moduleResolution": "Node"
   },
-  "include": ["src/**/*", "../../libs/common/src/**/*"],
-  "references": [
-    { "path": "../../libs/common" }
-  ],
-  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"],
+  "paths": {
+    "@investing/common": ["../../libs/common/src"],
+    "@investing/common/*": ["../../libs/common/src/*"]
+  }
 }

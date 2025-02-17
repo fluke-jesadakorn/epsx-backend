@@ -2,7 +2,7 @@ import {
   SqlQueryResult,
   SqlQueryContext,
   SqlQueryValidation,
-  QueryTemplate
+  QueryTemplate,
 } from '../types/ai.types';
 
 // Note: Stock and Financial table schemas moved to common library
@@ -10,7 +10,7 @@ export type {
   SqlQueryResult,
   SqlQueryContext,
   SqlQueryValidation,
-  QueryTemplate
+  QueryTemplate,
 };
 
 // TODO: Add query optimization schemas

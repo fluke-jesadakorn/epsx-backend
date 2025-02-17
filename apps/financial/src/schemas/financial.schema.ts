@@ -178,7 +178,7 @@ export class Financial extends Document implements IFinancial {
    * - Add financial ratio calculations
    * - Support quarterly and annual data comparison
    * - Add data quality validation rules
-   * 
+   *
    * Infrastructure Improvements:
    * - Add soft delete functionality
    * - Implement audit logging for all changes
@@ -200,7 +200,10 @@ FinancialSchema.index({ stock: 1, fiscal_year: -1, fiscal_quarter: -1 }); // Lat
 FinancialSchema.index({ eps_diluted: 1, report_date: -1 }); // EPS tracking
 FinancialSchema.index({ net_income: 1, report_date: -1 }); // Income tracking
 FinancialSchema.index({ revenue: 1, report_date: -1 }); // Revenue tracking
-FinancialSchema.index({ stock: 1, fiscal_year: 1, fiscal_quarter: 1 }, { unique: true, background: true }); // Ensure unique financial records per stock per quarter
+FinancialSchema.index(
+  { stock: 1, fiscal_year: 1, fiscal_quarter: 1 },
+  { unique: true, background: true },
+); // Ensure unique financial records per stock per quarter
 FinancialSchema.index({ stock: 1, fiscal_year: 1 }); // Annual reports
 FinancialSchema.index({ ebitda_margin: 1 }); // Performance metrics
 FinancialSchema.index({ eps_basic: 1 }); // For EPS basic sorting

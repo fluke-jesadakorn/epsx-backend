@@ -27,7 +27,7 @@ export class OllamaProvider implements AIProvider {
   }
 
   async query(params: AIQueryParams): Promise<AIResponse> {
-    const client = this.createClient({});
+    const client = this.createClient({ model: params.model });
     const startTime = Date.now();
 
     try {
@@ -56,7 +56,7 @@ export class OllamaProvider implements AIProvider {
   }
 
   async chat(params: ChatQueryParams): Promise<ChatResponse> {
-    const client = this.createClient({});
+    const client = this.createClient({ model: params.model });
     const startTime = Date.now();
 
     try {

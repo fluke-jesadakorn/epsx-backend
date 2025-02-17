@@ -26,7 +26,6 @@ import { HealthController } from './controllers/health.controller';
       }),
       inject: [ConfigService],
     }),
-    TerminusModule,
     ClientsModule.registerAsync([
       {
         name: 'EXCHANGE_SERVICE',
@@ -80,6 +79,7 @@ import { HealthController } from './controllers/health.controller';
         inject: [ConfigService],
       },
     ]),
+    TerminusModule,
   ],
   controllers: [
     StockController,

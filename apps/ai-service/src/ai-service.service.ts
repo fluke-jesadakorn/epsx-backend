@@ -1,4 +1,9 @@
-import { Injectable, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { InjectConnection } from '@nestjs/mongoose';
 import { Connection } from 'mongoose';
 import { AiQueryDto } from './dto/ai-query.dto';
@@ -26,7 +31,8 @@ export class AiServiceService {
     const startTime = Date.now();
     try {
       const sanitizedQuery = queryDto.sanitizeQuery();
-      const { query, params = [] } = await this.aiQueryService.generateSqlQuery(sanitizedQuery);
+      const { query, params = [] } =
+        await this.aiQueryService.generateSqlQuery(sanitizedQuery);
       const result = await this.executeQueryWithRetry(query, params);
 
       return {
@@ -35,28 +41,41 @@ export class AiServiceService {
         analysis: 'Analysis will be implemented in future updates',
         meta: {
           executionTime: Date.now() - startTime,
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       };
-
     } catch (error) {
-      this.logger.error(`Error processing query: ${error.message}`, error.stack);
-      
+      this.logger.error(
+        `Error processing query: ${error.message}`,
+        error.stack,
+      );
+
       if (error.name === 'TimeoutError') {
-        throw new BadRequestException('Query timed out. Please try a more specific query or break it into smaller parts.');
+        throw new BadRequestException(
+          'Query timed out. Please try a more specific query or break it into smaller parts.',
+        );
       } else if (error.name === 'QueryFailedError') {
-        throw new BadRequestException('Invalid query structure. Please rephrase your request.');
+        throw new BadRequestException(
+          'Invalid query structure. Please rephrase your request.',
+        );
       } else if (error instanceof BadRequestException) {
         throw error;
       } else {
-        throw new InternalServerErrorException('An unexpected error occurred while processing your query.');
+        throw new InternalServerErrorException(
+          'An unexpected error occurred while processing your query.',
+        );
       }
     }
   }
 
-  private async executeQueryWithRetry(query: string, params: any[]): Promise<any[]> {
+  private async executeQueryWithRetry(
+    query: string,
+    params: any[],
+  ): Promise<any[]> {
     if (!this.connection) {
-      throw new InternalServerErrorException('Database connection not initialized');
+      throw new InternalServerErrorException(
+        'Database connection not initialized',
+      );
     }
 
     try {
@@ -65,30 +84,42 @@ export class AiServiceService {
       const collection = this.determineCollection(query);
 
       return new Promise((resolve, reject) => {
-        from(this.connection.collection(collection).aggregate(pipeline).toArray())
+        from(
+          this.connection.collection(collection).aggregate(pipeline).toArray(),
+        )
           .pipe(
             timeout(DEFAULT_TIMEOUT),
             retry({
               count: MAX_RETRIES,
               delay: (error, retryCount) => {
                 const delay = Math.pow(2, retryCount - 1) * 1000;
-                this.logger.debug(`Retrying query. Attempt ${retryCount} of ${MAX_RETRIES}. Delay: ${delay}ms`);
+                this.logger.debug(
+                  `Retrying query. Attempt ${retryCount} of ${MAX_RETRIES}. Delay: ${delay}ms`,
+                );
                 return from([]).pipe(timeout(delay));
-              }
+              },
             }),
-            catchError(error => {
-              this.logger.error(`Query execution error: ${error.message}`, error.stack);
+            catchError((error) => {
+              this.logger.error(
+                `Query execution error: ${error.message}`,
+                error.stack,
+              );
               throw error;
-            })
+            }),
           )
           .subscribe({
-            next: result => resolve(result || []),
-            error: error => reject(error)
+            next: (result) => resolve(result || []),
+            error: (error) => reject(error),
           });
       });
     } catch (error) {
-      this.logger.error(`Failed to execute query: ${error.message}`, error.stack);
-      throw new InternalServerErrorException('Failed to execute database query');
+      this.logger.error(
+        `Failed to execute query: ${error.message}`,
+        error.stack,
+      );
+      throw new InternalServerErrorException(
+        'Failed to execute database query',
+      );
     }
   }
 
@@ -98,9 +129,7 @@ export class AiServiceService {
    */
   private convertToPipeline(query: string, params: any[]): any[] {
     // For now, return a simple find query
-    return [
-      { $match: params[0] || {} }
-    ];
+    return [{ $match: params[0] || {} }];
   }
 
   /**
@@ -116,15 +145,17 @@ export class AiServiceService {
     try {
       return await this.aiQueryService.handleChatQuery(
         chatDto.messages,
-        chatDto.options
+        chatDto.options,
       );
     } catch (error) {
       this.logger.error(`Error handling chat: ${error.message}`, error.stack);
-      
+
       if (error instanceof BadRequestException) {
         throw error;
       } else {
-        throw new InternalServerErrorException('An unexpected error occurred while processing your chat request.');
+        throw new InternalServerErrorException(
+          'An unexpected error occurred while processing your chat request.',
+        );
       }
     }
   }

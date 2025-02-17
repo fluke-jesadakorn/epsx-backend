@@ -42,7 +42,9 @@ export class HttpService {
   async fetchStockScreener<T>(marketCode: string): Promise<T | null> {
     try {
       const baseUrl = process.env.STOCK_SCREENER_API_URL;
-      const response = await this.axiosInstance.get(`${baseUrl}/stocks/${marketCode}`);
+      const response = await this.axiosInstance.get(
+        `${baseUrl}/stocks/${marketCode}`,
+      );
       return response.data as T;
     } catch (error) {
       this.logger.error(`Error fetching stock screener data: ${error.message}`);

@@ -1,4 +1,7 @@
-import { SqlQueryContext, SqlQueryValidation } from '../schema/sql-query.schema';
+import {
+  SqlQueryContext,
+  SqlQueryValidation,
+} from '../schema/sql-query.schema';
 
 export const QUERY_CONTEXT: SqlQueryContext = {
   tables: {
@@ -8,13 +11,13 @@ export const QUERY_CONTEXT: SqlQueryContext = {
   joins: {
     stocks_financials: {
       table: 'financials',
-      condition: 'stocks.id = financials.stock_id'
-    }
+      condition: 'stocks.id = financials.stock_id',
+    },
   },
   views: {
     latest_financials: 'latest_financials_view',
-    stock_performance_metrics: 'stock_performance_view'
-  }
+    stock_performance_metrics: 'stock_performance_view',
+  },
 };
 
 export const QUERY_VALIDATION: SqlQueryValidation = {
@@ -22,10 +25,10 @@ export const QUERY_VALIDATION: SqlQueryValidation = {
     limit: 'number',
     sector: 'string',
     year: 'number',
-    threshold: 'number'
+    threshold: 'number',
   },
   requiredTables: ['stocks'],
-  allowedOperations: ['SELECT']
+  allowedOperations: ['SELECT'],
 };
 
 export const SYSTEM_PROMPT = `You are a SQL expert that generates queries for a financial database with the following schema:

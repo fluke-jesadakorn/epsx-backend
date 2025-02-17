@@ -2,15 +2,13 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "declaration": true,
-    "outDir": "../../dist/apps/ai-service",
-    "baseUrl": "./",
+    "outDir": "./dist",
+    "baseUrl": "../../",
     "paths": {
-      "@investing/common": ["../../libs/common/src"],
-      "@investing/common/*": ["../../libs/common/src/*"]
+      "@investing/common": ["libs/common/dist"],
+      "@investing/common/*": ["libs/common/dist/*"]
     }
   },
-  "preserveSymlinks": true,
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"],
-  "references": [{ "path": "../../libs/common/tsconfig.json" }]
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }

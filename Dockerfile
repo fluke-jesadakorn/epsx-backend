@@ -2,25 +2,44 @@
 FROM oven/bun:1.2.2 AS builder
 WORKDIR /app
 
+# Set build arguments
+ARG SERVICE=gateway
+
 # Copy package files and install all dependencies (including dev)
 COPY package.json bun.lock ./
+COPY libs/common/package.json ./libs/common/
+COPY apps/${SERVICE}/package.json ./apps/${SERVICE}/
 RUN bun install
 
-# Copy full source and build the application in one step
-COPY . .
-RUN bun install -g rimraf && bun run build
+# Copy common library source
+COPY libs/common ./libs/common
+
+# Copy service source
+COPY apps/${SERVICE} ./apps/${SERVICE}
+COPY nest-cli.json tsconfig.json tsconfig.build.json ./
+
+# Build the service
+RUN bun install -g rimraf && \
+    bun run build:common && \
+    bun run build:${SERVICE}
 
 # Production stage
 FROM oven/bun:1.2.2-slim AS production
 WORKDIR /app
 
+# Set build arguments
+ARG SERVICE=gateway
+
 # Copy package files and install only production dependencies
 COPY package.json bun.lock ./
+COPY libs/common/package.json ./libs/common/
+COPY apps/${SERVICE}/package.json ./apps/${SERVICE}/
 RUN bun install --production \
     && rm -rf /root/.bun/cache  # remove any bun cache if exists
 
 # Copy over the built application
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/libs/common/dist ./libs/common/dist
 
 # NOTE: In production environment, it's recommended to use environment variables
 # instead of .env files for better security. The .env file copying is included

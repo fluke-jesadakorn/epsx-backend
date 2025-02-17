@@ -5,9 +5,7 @@ import { FinancialService } from './financial.service';
 
 @Controller()
 export class FinancialController {
-  constructor(
-    private readonly financialService: FinancialService,
-  ) {}
+  constructor(private readonly financialService: FinancialService) {}
 
   @MessagePattern({ cmd: 'get_eps_growth_ranking' })
   async getEPSGrowthRanking(params: PaginationParams = {}) {

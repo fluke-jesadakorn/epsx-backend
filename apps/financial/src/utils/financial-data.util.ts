@@ -1,4 +1,4 @@
-import { ProcessedFinancialData } from '@investing/common';
+import { ProcessedFinancialData } from '@investing/common/src';
 import { Logger } from '@nestjs/common';
 
 const logger = new Logger('FinancialDataUtil');
@@ -32,7 +32,9 @@ export const initializeProcessedData = (): ProcessedFinancialData => {
 /**
  * Validates the financial data structure and returns the data array if valid
  */
-const validateFinancialData = (financialData: RawFinancialData): any[] | null => {
+const validateFinancialData = (
+  financialData: RawFinancialData,
+): any[] | null => {
   if (!financialData.nodes || financialData.nodes.length < 3) {
     logger.warn('Invalid dynamic financial data structure: missing nodes');
     return null;
@@ -47,13 +49,17 @@ const validateFinancialData = (financialData: RawFinancialData): any[] | null =>
 const extractFieldMapping = (data: any[]): Record<string, number> | null => {
   const financialIndex = data[0]?.financialData;
   if (typeof financialIndex !== 'number') {
-    logger.warn('Invalid dynamic financial data structure: missing financialData index');
+    logger.warn(
+      'Invalid dynamic financial data structure: missing financialData index',
+    );
     return null;
   }
 
   const mapping = data[financialIndex];
   if (!mapping || typeof mapping !== 'object') {
-    logger.warn('Invalid dynamic financial data structure: missing mapping object');
+    logger.warn(
+      'Invalid dynamic financial data structure: missing mapping object',
+    );
     return null;
   }
 
@@ -61,19 +67,23 @@ const extractFieldMapping = (data: any[]): Record<string, number> | null => {
 };
 
 // Field transformers for each data type
-const fieldTransformers: Record<keyof ProcessedFinancialData, (value: any) => any> = {
-  fiscalYear: value => +value,
-  fiscalQuarter: value => typeof value === 'string' ? parseInt(value.replace('Q', '')) : +value,
-  revenue: value => value,
-  revenueGrowth: value => value,
-  operatingIncome: value => value,
-  interestExpense: value => value,
-  netIncome: value => value,
-  epsBasic: value => value,
-  epsDiluted: value => value,
-  freeCashFlow: value => value,
-  profitMargin: value => value,
-  totalOperatingExpenses: value => value,
+const fieldTransformers: Record<
+  keyof ProcessedFinancialData,
+  (value: any) => any
+> = {
+  fiscalYear: (value) => +value,
+  fiscalQuarter: (value) =>
+    typeof value === 'string' ? parseInt(value.replace('Q', '')) : +value,
+  revenue: (value) => value,
+  revenueGrowth: (value) => value,
+  operatingIncome: (value) => value,
+  interestExpense: (value) => value,
+  netIncome: (value) => value,
+  epsBasic: (value) => value,
+  epsDiluted: (value) => value,
+  freeCashFlow: (value) => value,
+  profitMargin: (value) => value,
+  totalOperatingExpenses: (value) => value,
 };
 
 /**
@@ -92,7 +102,9 @@ export const processDynamicFinancialData = (
 
   const keys = Object.keys(fieldMapping);
   if (keys.length === 0) {
-    logger.warn('Invalid dynamic financial data structure: mapping object has no keys');
+    logger.warn(
+      'Invalid dynamic financial data structure: mapping object has no keys',
+    );
     return [];
   }
 
@@ -100,7 +112,9 @@ export const processDynamicFinancialData = (
   const dataMap = keys.reduce<Record<string, any[]>>((acc, key) => {
     const arr = data[fieldMapping[key]];
     if (!Array.isArray(arr)) {
-      logger.warn(`Expected array at data[fieldMapping[${key}]] but got undefined or non-array`);
+      logger.warn(
+        `Expected array at data[fieldMapping[${key}]] but got undefined or non-array`,
+      );
       acc[key] = [];
     } else {
       acc[key] = arr.map((idx: number) => data[idx]);
@@ -118,9 +132,11 @@ export const processDynamicFinancialData = (
     const entry = initializeProcessedData();
 
     // Apply transformers to map and convert the data
-    (Object.keys(fieldTransformers) as Array<keyof ProcessedFinancialData>).forEach(key => {
-      if (dataMap[key]?.[i] !== undefined) {
-        entry[key] = fieldTransformers[key](dataMap[key][i]);
+    (
+      Object.keys(fieldTransformers) as Array<keyof ProcessedFinancialData>
+    ).forEach((key) => {
+      if (dataMap[key as string]?.[i] !== undefined) {
+        entry[key] = fieldTransformers[key](dataMap[key as string][i]);
       }
     });
 

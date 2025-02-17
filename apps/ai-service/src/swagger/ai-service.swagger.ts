@@ -13,7 +13,7 @@ export class AiQueryRequestExample {
       summary: 'Basic Query',
       description: 'Simple query without options',
       value: {
-        query: 'Show me tech companies with revenue over 1 million dollars'
+        query: 'Show me tech companies with revenue over 1 million dollars',
       },
     },
     queryWithOptions: {
@@ -22,25 +22,26 @@ export class AiQueryRequestExample {
       value: {
         query: 'What are the top performing companies by EPS growth?',
         options: {
-          limit: 5
-        }
+          limit: 5,
+        },
       },
     },
     complexQuery: {
       summary: 'Complex Query',
       description: 'Detailed analysis query with custom options',
       value: {
-        query: 'Compare revenue growth of top tech companies over the last 3 years',
+        query:
+          'Compare revenue growth of top tech companies over the last 3 years',
         options: {
-          limit: 10
-        }
-      }
-    }
+          limit: 10,
+        },
+      },
+    },
   };
 
   @ApiProperty({
     description: 'The query to process',
-    example: 'Show me tech companies with revenue over 1 million dollars'
+    example: 'Show me tech companies with revenue over 1 million dollars',
   })
   query: string;
 
@@ -53,9 +54,9 @@ export class AiQueryRequestExample {
         description: 'Maximum number of results to return',
         minimum: 1,
         maximum: 100,
-        default: 10
-      }
-    })
+        default: 10,
+      },
+    }),
   })
   options?: {
     limit?: number;
@@ -66,13 +67,13 @@ export class ChatMessage {
   @ApiProperty({
     description: 'Role of the message sender',
     enum: ['system', 'user', 'assistant'],
-    example: 'user'
+    example: 'user',
   })
   role: 'system' | 'user' | 'assistant';
 
   @ApiProperty({
     description: 'Content of the message',
-    example: 'What are the latest financial metrics for Apple?'
+    example: 'What are the latest financial metrics for Apple?',
   })
   content: string;
 }
@@ -83,7 +84,7 @@ export class ChatOptions {
     minimum: 0,
     maximum: 1,
     default: 0.7,
-    required: false
+    required: false,
   })
   temperature?: number;
 
@@ -92,7 +93,7 @@ export class ChatOptions {
     minimum: 1,
     maximum: 2048,
     default: 500,
-    required: false
+    required: false,
   })
   maxTokens?: number;
 }
@@ -127,7 +128,7 @@ export class AiChatRequestExample {
         ],
         options: {
           temperature: 0.7,
-          maxTokens: 1000
+          maxTokens: 1000,
         },
       },
     },
@@ -143,11 +144,11 @@ export class AiChatRequestExample {
           {
             role: 'user',
             content: 'Analyze the competitive landscape of the EV market',
-          }
+          },
         ],
         options: {
           temperature: 0.9,
-          maxTokens: 2048
+          maxTokens: 2048,
         },
       },
     },
@@ -156,14 +157,14 @@ export class AiChatRequestExample {
   @ApiProperty({
     description: 'Array of chat messages',
     type: [ChatMessage],
-    examples: AiChatRequestExample.examples
+    examples: AiChatRequestExample.examples,
   })
   messages: ChatMessage[];
 
   @ApiProperty({
     description: 'Chat configuration options',
     type: ChatOptions,
-    required: false
+    required: false,
   })
   options?: ChatOptions;
 }

@@ -8,9 +8,14 @@ interface PaginationOptions {
 export const DEFAULT_PAGE_SIZE = 10;
 export const MAX_PAGE_SIZE = 100;
 
-export function getPaginationOptions(params: PaginationParams = {}): PaginationOptions {
+export function getPaginationOptions(
+  params: PaginationParams = {},
+): PaginationOptions {
   const page = Math.max(1, params.page || 1);
-  const take = Math.min(MAX_PAGE_SIZE, Math.max(1, params.limit || DEFAULT_PAGE_SIZE));
+  const take = Math.min(
+    MAX_PAGE_SIZE,
+    Math.max(1, params.limit || DEFAULT_PAGE_SIZE),
+  );
   const skip = (page - 1) * take;
 
   return { skip, take };

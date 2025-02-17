@@ -7,7 +7,7 @@ import {
   ChatQueryDto,
   AIResponseDto,
   ChatResponseDto,
-} from '@investing/common';
+} from '../swagger/entities/ai-service.swagger';
 
 /**
  * Gateway controller for AI-powered natural language processing of financial data

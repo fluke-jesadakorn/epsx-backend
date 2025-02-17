@@ -11,7 +11,11 @@ import {
   QUERY_VALIDATION,
   SYSTEM_PROMPT,
 } from './config/query-rules.config';
-import { BaseMessage, HumanMessage, SystemMessage } from '@langchain/core/messages';
+import {
+  BaseMessage,
+  HumanMessage,
+  SystemMessage,
+} from '@langchain/core/messages';
 import { BaseChatModel } from '@langchain/core/language_models/chat_models';
 import { JsonOutputParser } from '@langchain/core/output_parsers';
 import { PromptTemplate } from '@langchain/core/prompts';
@@ -25,6 +29,7 @@ export class AiQueryService {
 
   constructor() {
     const useLocalOllama = process.env.USE_LOCAL_OLLAMA === 'true';
+    // TODO: Make the provider configurable through a config file or environment variables
     const providerType = useLocalOllama ? 'ollama' : 'openrouter';
     this.provider = ProviderFactory.getProvider(providerType);
 
@@ -42,10 +47,12 @@ export class AiQueryService {
 
     this.provider.validateConfig(this.config);
     this.model = this.provider.createClient(this.config);
+    // TODO: Consider adding a retry mechanism for model creation in case of failure
   }
 
   private convertToLangChainMessages(messages: AIMessage[]): BaseMessage[] {
-    return messages.map(msg => {
+    // TODO: Add support for other message roles (e.g., function calls)
+    return messages.map((msg) => {
       const content = msg.content;
       switch (msg.role) {
         case 'system':
@@ -64,7 +71,10 @@ export class AiQueryService {
     try {
       this.logger.debug(`Generating SQL query for: ${naturalQuery}`);
 
-      const outputParser = new JsonOutputParser<{ query: string; parameters: any[] }>();
+      const outputParser = new JsonOutputParser<{
+        query: string;
+        parameters: any[];
+      }>();
 
       const prompt = PromptTemplate.fromTemplate(`
         {system_prompt}
@@ -77,7 +87,7 @@ export class AiQueryService {
       `);
 
       const chain = prompt.pipe(this.model).pipe(outputParser);
-      
+
       const result = await chain.invoke({
         system_prompt: SYSTEM_PROMPT,
         query: naturalQuery,
@@ -91,6 +101,8 @@ export class AiQueryService {
       };
     } catch (error) {
       this.logger.error('Error generating SQL query:', error);
+      // TODO: Implement more robust error handling and logging
+      // Consider logging the specific error type and stack trace
       throw new Error(`Failed to generate SQL query: ${error.message}`);
     }
   }
@@ -132,13 +144,15 @@ export class AiQueryService {
 
       const langChainMessages = this.convertToLangChainMessages(messages);
       const result = await this.model.invoke(langChainMessages);
-      
+
       return {
         role: 'assistant',
         content: result.content.toString(),
       };
     } catch (error) {
       this.logger.error('Error processing chat query:', error);
+      // TODO: Implement more robust error handling and logging
+      // Consider logging the specific error type and stack trace
       throw new Error(`Failed to process chat query: ${error.message}`);
     }
   }
@@ -154,4 +168,5 @@ export class AiQueryService {
    * TODO: Add support for query history tracking using LangChain Memory
    * TODO: Add support for query suggestions based on history using LangChain Retrieval
    */
+  // TODO: Consider breaking this class down into smaller, more focused classes
 }

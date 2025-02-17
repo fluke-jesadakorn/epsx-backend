@@ -10,13 +10,6 @@
     "build": "nest build",
     "clean": "rimraf dist"
   },
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
-  },
   "dependencies": {
     "@nestjs/common": "^11.0.8",
     "mongoose": "^8.10.0",

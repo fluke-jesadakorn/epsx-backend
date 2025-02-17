@@ -16,7 +16,9 @@ import { Exchange, ExchangeSchema } from './schemas/exchange.schema';
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => {
-        const uri = configService.get<string>('MONGODB_URI') || 'mongodb://127.0.0.1:27017';
+        const uri =
+          configService.get<string>('MONGODB_URI') ||
+          'mongodb://127.0.0.1:27017';
         const dbName = configService.get<string>('MONGODB_DB_NAME') || 'test';
         console.log('Connecting to MongoDB:', { uri, dbName });
         return {

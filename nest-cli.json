@@ -2,11 +2,9 @@
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
   "monorepo": true,
-  "root": "src",
   "sourceRoot": "src",
   "compilerOptions": {
-    "deleteOutDir": true,
-    "webpack": true
+    "deleteOutDir": true
   },
   "projects": {
     "ai-service": {
@@ -15,7 +13,8 @@
       "entryFile": "main",
       "sourceRoot": "apps/ai-service/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/ai-service/tsconfig.json"
+        "tsConfigPath": "apps/ai-service/tsconfig.json",
+        "webpack": false
       }
     },
     "gateway": {

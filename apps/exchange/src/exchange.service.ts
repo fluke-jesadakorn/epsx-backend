@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { chromium } from 'playwright';
+import axios from 'axios';
+import * as cheerio from 'cheerio';
 import { Exchange } from './schemas/exchange.schema';
 
 @Injectable()
@@ -18,7 +19,9 @@ export class ExchangeService {
       .exec();
 
     if (existingExchange) {
-      throw new Error(`Exchange with market code ${exchangeData.market_code} already exists`);
+      throw new Error(
+        `Exchange with market code ${exchangeData.market_code} already exists`,
+      );
     }
 
     const exchange = new this.exchangeModel(exchangeData);
@@ -28,62 +31,61 @@ export class ExchangeService {
   // Read
   async findAll(skip = 0, limit = 10) {
     try {
-      console.log('findAll called with:', { skip, limit });
-      console.log('MongoDB URI:', process.env.MONGODB_URI);
-      console.log('MongoDB DB Name:', process.env.MONGODB_DB_NAME);
-      
+      // Remove console logs in production
       const [data, total] = await Promise.all([
         this.exchangeModel.find().skip(skip).limit(limit).lean().exec(),
         this.exchangeModel.countDocuments().exec(),
-      ]).catch(err => {
+      ]).catch((err) => {
         console.error('MongoDB operation failed:', err);
         throw err;
       });
 
-      console.log('Found data:', { count: data?.length, total });
-      
       if (!data || data.length === 0) {
-        console.log('No data found, attempting to seed...');
         // Seed initial data if no exchanges exist
+        // TODO: Use a separate script or migration for data seeding
         const sampleExchange = {
           exchange_name: 'New York Stock Exchange',
           country: 'United States',
           market_code: 'NYSE',
           currency: 'USD',
           exchange_url: 'https://www.nyse.com',
-          timezone: 'America/New_York'
+          timezone: 'America/New_York',
         };
 
         await this.create(sampleExchange);
-        
+
         // Fetch again after seeding
         const [newData, newTotal] = await Promise.all([
           this.exchangeModel.find().skip(skip).limit(limit).lean().exec(),
           this.exchangeModel.countDocuments().exec(),
         ]);
-        
-        const result = { data: newData, total: newTotal, page: Math.floor(skip / limit) + 1, limit };
-      console.log('Returning result:', result);
-      return result;
+
+        const result = {
+          data: newData,
+          total: newTotal,
+          page: Math.floor(skip / limit) + 1,
+          limit,
+        };
+        return result;
       }
 
       return { data, total, page: Math.floor(skip / limit) + 1, limit };
     } catch (error) {
       console.error('Error in findAll:', error);
-      console.error('findAll error details:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        cause: error.cause,
-      });
+      // TODO: Implement more robust error handling and logging
+      // Consider implementing a custom error class for database errors
       throw new Error(`Failed to fetch exchanges: ${error.message}`);
     }
   }
 
   async findOne(marketCode: string) {
-    const exchange = await this.exchangeModel.findOne({ market_code: marketCode }).exec();
+    const exchange = await this.exchangeModel
+      .findOne({ market_code: marketCode })
+      .exec();
     if (!exchange) {
-      throw new NotFoundException(`Exchange with market code ${marketCode} not found`);
+      throw new NotFoundException(
+        `Exchange with market code ${marketCode} not found`,
+      );
     }
     return exchange;
   }
@@ -93,9 +95,11 @@ export class ExchangeService {
     const exchange = await this.exchangeModel
       .findOneAndUpdate({ market_code: marketCode }, updateData, { new: true })
       .exec();
-    
+
     if (!exchange) {
-      throw new NotFoundException(`Exchange with market code ${marketCode} not found`);
+      throw new NotFoundException(
+        `Exchange with market code ${marketCode} not found`,
+      );
     }
     return exchange;
   }
@@ -105,45 +109,58 @@ export class ExchangeService {
     const exchange = await this.exchangeModel
       .findOneAndDelete({ market_code: marketCode })
       .exec();
-    
+
     if (!exchange) {
-      throw new NotFoundException(`Exchange with market code ${marketCode} not found`);
+      throw new NotFoundException(
+        `Exchange with market code ${marketCode} not found`,
+      );
     }
     return exchange;
   }
 
-  // Legacy scraping functionality
+  // Web scraping functionality using Cheerio
   async scrapeAndSaveExchanges() {
-    const browser = await chromium.launch({
-      headless: process.env.HEADLESS_MODE !== 'false',
-    });
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
     try {
-      await page.goto('https://stockanalysis.com/list/exchanges/', {
-        waitUntil: 'networkidle',
-      });
-
-      const table = await page.waitForSelector('#main > div > div > table');
-      if (!table) {
-        throw new Error('Table not found');
-      }
-
-      const exchanges = await page.$$eval(
-        '#main > div > div > table tbody tr',
-        (rows) =>
-          rows.map((row) => ({
-            exchange_name: row.querySelectorAll('td')[0].innerText.trim(),
-            country: row.querySelectorAll('td')[1].innerText.trim(),
-            market_code: row.querySelectorAll('td')[2].innerText.trim(),
-            currency: row.querySelectorAll('td')[3].innerText.trim(),
-            exchange_url:
-              row.querySelectorAll('td')[0].querySelector('a')?.href.trim() ||
-              '',
-            timezone: 'UTC',
-          })),
+      // Fetch the HTML content
+      const response = await axios.get(
+        'https://stockanalysis.com/list/exchanges/',
+        {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+          },
+        },
       );
+
+      // Load the HTML content into Cheerio
+      const $ = cheerio.load(response.data);
+
+      // Find the table and extract data
+      const exchanges: Array<{
+        exchange_name: string;
+        country: string;
+        market_code: string;
+        currency: string;
+        exchange_url: string;
+        timezone: string;
+      }> = [];
+
+      // TODO: Use a more robust selector for table rows
+      // Consider using a more specific selector to avoid issues with website changes
+      $('#main > div > div > table tbody tr').each((_, row) => {
+        const cells = $(row).find('td');
+        const nameCell = $(cells[0]);
+
+        exchanges.push({
+          exchange_name: nameCell.text().trim(),
+          country: $(cells[1]).text().trim(),
+          market_code: $(cells[2]).text().trim(),
+          currency: $(cells[3]).text().trim(),
+          exchange_url: nameCell.find('a').attr('href')?.trim() || '',
+          // TODO: Dynamically determine timezone based on exchange location
+          timezone: 'UTC',
+        });
+      });
 
       if (exchanges.length === 0) {
         throw new Error('No exchanges found');
@@ -166,16 +183,22 @@ export class ExchangeService {
             newCount++;
           }
         } catch (error) {
-          console.error(`Failed to save exchange ${exchangeData.market_code}:`, error);
+          console.error(
+            `Failed to save exchange ${exchangeData.market_code}:`,
+            error,
+          );
+          // TODO: Implement more robust error handling for individual exchange saves
         }
       }
 
-      return { newCount, updateCount, total: await this.exchangeModel.countDocuments().exec() };
+      return {
+        newCount,
+        updateCount,
+        total: await this.exchangeModel.countDocuments().exec(),
+      };
     } catch (error) {
       console.error('Failed to scrape exchanges:', error);
       throw error;
-    } finally {
-      await browser.close();
     }
   }
 }

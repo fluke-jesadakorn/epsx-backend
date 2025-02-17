@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { 
-  PaginationParams, 
-  PaginationResult, 
+import {
+  PaginationParams,
+  PaginationResult,
   EPSGrowthResult,
   FetchState,
-  WorkerConfig
+  WorkerConfig,
 } from '@investing/common';
 import { LoggerUtil } from './utils/logger.util';
 import { FetchStateService } from './services/fetch-state.service';
@@ -12,8 +12,17 @@ import { FinancialDataService } from './services/financial-data.service';
 import { WorkerPoolService } from './services/worker-pool.service';
 
 // Local implementation of retry decorator
-function Retry(config: { maxAttempts: number; initialDelay: number; maxDelay?: number; retryableErrors?: (string | RegExp)[] }) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+function Retry(config: {
+  maxAttempts: number;
+  initialDelay: number;
+  maxDelay?: number;
+  retryableErrors?: (string | RegExp)[];
+}) {
+  return function (
+    target: any,
+    propertyKey: string,
+    descriptor: PropertyDescriptor,
+  ) {
     const originalMethod = descriptor.value;
 
     descriptor.value = async function (...args: any[]) {
@@ -24,7 +33,7 @@ function Retry(config: { maxAttempts: number; initialDelay: number; maxDelay?: n
         try {
           return await originalMethod.apply(this, args);
         } catch (error: any) {
-          const shouldRetry = config.retryableErrors?.some(pattern => {
+          const shouldRetry = config.retryableErrors?.some((pattern) => {
             if (pattern instanceof RegExp) {
               return pattern.test(error.message);
             }
@@ -35,7 +44,7 @@ function Retry(config: { maxAttempts: number; initialDelay: number; maxDelay?: n
             throw error;
           }
 
-          await new Promise(resolve => setTimeout(resolve, delay));
+          await new Promise((resolve) => setTimeout(resolve, delay));
           delay = Math.min(delay * 2, config.maxDelay || 30000);
           attempt++;
         }
@@ -109,7 +118,7 @@ export class FinancialService {
         page: Math.floor(skip / limit) + 1,
         totalPages: Math.ceil(total / limit),
         orderBy: params.orderBy,
-        direction: params.direction
+        direction: params.direction,
       },
     };
   }
@@ -124,8 +133,11 @@ export class FinancialService {
       let { currentPage, totalProcessed } = state;
 
       while (true) {
-        const result = await this.processStocksPage(currentPage, totalProcessed);
-        
+        const result = await this.processStocksPage(
+          currentPage,
+          totalProcessed,
+        );
+
         if (result.shouldBreak) {
           break;
         }
@@ -144,10 +156,7 @@ export class FinancialService {
         });
 
         // Apply adaptive delay before next page
-        const delay = this.calculateAdaptiveDelay(
-          successRate,
-          processingTime,
-        );
+        const delay = this.calculateAdaptiveDelay(successRate, processingTime);
         if (delay > 0) {
           this.logger.log(
             `Waiting ${delay}ms before next page (Success rate: ${(
@@ -174,7 +183,10 @@ export class FinancialService {
    * Process a single page of stocks with retry capability
    */
   @Retry({ ...DB_RETRY_CONFIG, maxAttempts: 5, initialDelay: 1000 })
-  private async processStocksPage(currentPage: number, totalProcessed: number): Promise<ProcessPageResult> {
+  private async processStocksPage(
+    currentPage: number,
+    totalProcessed: number,
+  ): Promise<ProcessPageResult> {
     const stocks = await this.financialData.getStocksBatch(
       currentPage,
       WORKER_CONFIG.pageSize,

@@ -27,7 +27,7 @@ class ErrorFilter implements ExceptionFilter {
  */
 async function bootstrap() {
   const logger = new Logger('AiMicroservice');
-  
+
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(
     AiModule,
     {
@@ -37,7 +37,7 @@ async function bootstrap() {
         retryAttempts: 3,
         retryDelay: 1000,
       },
-      logger: ['error', 'warn', 'log', 'debug', 'verbose']
+      logger: ['error', 'warn', 'log', 'debug', 'verbose'],
     },
   );
 
@@ -45,8 +45,10 @@ async function bootstrap() {
   app.useGlobalFilters(new ErrorFilter());
 
   await app.listen();
-  logger.log(`AI Microservice is listening on port ${process.env.AI_SERVICE_PORT || '4400'}`);
-  
+  logger.log(
+    `AI Microservice is listening on port ${process.env.AI_SERVICE_PORT || '4400'}`,
+  );
+
   // Log configuration for debugging
   logger.debug('AI Service Configuration:', {
     port: process.env.AI_SERVICE_PORT || '4400',

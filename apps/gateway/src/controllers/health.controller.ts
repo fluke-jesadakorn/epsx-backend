@@ -12,7 +12,7 @@ import {
 import {
   SwaggerHealthCheckResponse,
   SwaggerErrorResponse,
-} from '@investing/common';
+} from '../swagger/entities/common.swagger';
 import { lastValueFrom, timeout, retry, catchError } from 'rxjs';
 
 interface ServiceConfig {

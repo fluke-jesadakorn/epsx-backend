@@ -17,22 +17,26 @@ The platform consists of several microservices:
 ## Setup
 
 1. Install dependencies:
+
 ```bash
 bun install
 ```
 
 2. Configure environment variables:
+
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
 ```
 
 3. Start all services:
+
 ```bash
 bun run start:all
 ```
 
 Or start individual services:
+
 ```bash
 bun run start:gateway
 bun run start:stock
@@ -58,17 +62,20 @@ bun run start:ai
 ## API Documentation
 
 API documentation is available at:
+
 - Swagger UI: http://localhost:3000/docs
 - OpenAPI JSON: http://localhost:3000/docs-json
 
 ## Development
 
 ### Prerequisites
+
 - Bun >= 1.0.0
 - MongoDB >= 5.0
 - Node.js >= 18 (for development tools)
 
 ### Running in Development Mode
+
 ```bash
 # Start all services in development mode
 bun run start:all
@@ -78,6 +85,7 @@ bun run start:gateway:dev
 ```
 
 ## Testing
+
 ```bash
 # Run unit tests
 bun test

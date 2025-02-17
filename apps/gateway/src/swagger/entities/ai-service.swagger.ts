@@ -1,169 +1,130 @@
 import { ApiProperty } from '@nestjs/swagger';
+import {
+  AIQueryParams,
+  ChatQueryParams,
+  AIResponse,
+  ChatResponse,
+} from '@investing/common/src';
 
-export class Usage {
-  @ApiProperty({ type: Number, example: 150 })
-  prompt_tokens: number;
-
-  @ApiProperty({ type: Number, example: 50 })
-  completion_tokens: number;
-
-  @ApiProperty({ type: Number, example: 200 })
-  total_tokens: number;
-}
-
-export class ChatMessage {
-  @ApiProperty({ 
-    enum: ['system', 'user', 'assistant'],
-    example: 'user'
+export class AIQueryDto implements AIQueryParams {
+  @ApiProperty({
+    description: 'AI model to use for processing',
+    example: 'gpt-3.5-turbo',
   })
-  role: 'system' | 'user' | 'assistant';
+  model: string;
 
   @ApiProperty({
-    type: String,
-    example: 'What is the current market trend for tech stocks?'
+    description: 'The query prompt',
+    example: 'What are the current market trends?',
+  })
+  prompt: string;
+
+  @ApiProperty({ description: 'Optional market context data', required: false })
+  market_context?: any;
+
+  @ApiProperty({
+    description: 'Maximum tokens to generate',
+    required: false,
+    example: 1000,
+  })
+  max_tokens?: number;
+
+  @ApiProperty({
+    description: 'Temperature for response randomness',
+    required: false,
+    example: 0.7,
+  })
+  temperature?: number;
+}
+
+export class ChatMessageDto {
+  @ApiProperty({ description: 'Role of the message sender', example: 'user' })
+  role: string;
+
+  @ApiProperty({
+    description: 'Content of the message',
+    example: 'How is the market performing today?',
   })
   content: string;
 }
 
-export class AIQueryRequestExample {
+export class ChatQueryDto implements ChatQueryParams {
   @ApiProperty({
-    type: String,
-    example: 'gpt-4'
+    description: 'AI model to use for chat',
+    example: 'gpt-3.5-turbo',
   })
   model: string;
 
   @ApiProperty({
-    type: String,
-    example: 'Analyze the recent performance of AAPL stock'
+    description: 'Array of chat messages',
+    type: [ChatMessageDto],
   })
-  prompt: string;
+  messages: Array<{ role: string; content: string }>;
 
-  @ApiProperty({
-    type: Object,
-    example: {
-      symbol: 'AAPL',
-      timeframe: '1M',
-      indicators: ['MA', 'RSI']
-    },
-    required: false
-  })
+  @ApiProperty({ description: 'Optional market context data', required: false })
   market_context?: any;
 
   @ApiProperty({
-    type: Number,
+    description: 'Maximum tokens to generate',
+    required: false,
     example: 1000,
-    required: false
   })
   max_tokens?: number;
 
   @ApiProperty({
-    type: Number,
+    description: 'Temperature for response randomness',
+    required: false,
     example: 0.7,
-    required: false
   })
   temperature?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 0.9,
-    required: false
-  })
-  top_p?: number;
 }
 
-export class AIQueryResponseExample {
-  @ApiProperty({
-    type: String,
-    example: 'Based on the analysis of AAPL stock performance...'
-  })
+export class TokenUsageDto {
+  @ApiProperty({ description: 'Number of tokens in the prompt' })
+  prompt_tokens: number;
+
+  @ApiProperty({ description: 'Number of tokens in the completion' })
+  completion_tokens: number;
+
+  @ApiProperty({ description: 'Total number of tokens used' })
+  total_tokens: number;
+}
+
+export class AIResponseDto implements AIResponse {
+  @ApiProperty({ description: 'Generated response text' })
   text: string;
 
-  @ApiProperty({ type: () => Usage })
-  usage: Usage;
+  @ApiProperty({ type: TokenUsageDto })
+  usage: TokenUsageDto;
 
-  @ApiProperty({
-    type: String,
-    example: 'gpt-4'
-  })
-  model: string;
-}
-
-export class ChatQueryRequestExample {
-  @ApiProperty({
-    type: String,
-    example: 'gpt-4'
-  })
+  @ApiProperty({ description: 'Model used for generation' })
   model: string;
 
-  @ApiProperty({
-    type: [ChatMessage],
-    example: [
-      {
-        role: 'system',
-        content: 'You are a financial analysis assistant.'
-      },
-      {
-        role: 'user',
-        content: 'How has the tech sector performed this quarter?'
-      }
-    ]
-  })
-  messages: ChatMessage[];
-
-  @ApiProperty({
-    type: Object,
-    example: {
-      sector: 'Technology',
-      period: 'Q4 2024'
-    },
-    required: false
-  })
-  market_context?: any;
-
-  @ApiProperty({
-    type: Number,
-    example: 1000,
-    required: false
-  })
-  max_tokens?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 0.7,
-    required: false
-  })
-  temperature?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 0.9,
-    required: false
-  })
-  top_p?: number;
+  @ApiProperty({ description: 'Response creation timestamp', required: false })
+  created_at?: Date;
 }
 
-export class ChatResponseExample {
-  @ApiProperty({ type: () => ChatMessage })
-  message: ChatMessage;
-
-  @ApiProperty({ type: () => Usage })
-  usage: Usage;
-
+export class ChatMessageResponseDto {
   @ApiProperty({
-    type: String,
-    example: 'gpt-4'
+    description: 'Role of the message sender',
+    example: 'assistant',
   })
+  role: string;
+
+  @ApiProperty({ description: 'Content of the message' })
+  content: string;
+}
+
+export class ChatResponseDto implements ChatResponse {
+  @ApiProperty({ type: ChatMessageResponseDto })
+  message: ChatMessageResponseDto;
+
+  @ApiProperty({ type: TokenUsageDto })
+  usage: TokenUsageDto;
+
+  @ApiProperty({ description: 'Model used for chat' })
   model: string;
-}
 
-// Future Features Documentation
-/**
- * TODO: Add documentation for future features:
- * - Streaming response types
- * - Voice query request/response types
- * - Technical analysis integration types
- * - Custom model configuration types
- * - Sentiment analysis response types
- * - Market signals response types
- * - Real-time data integration types
- */
+  @ApiProperty({ description: 'Response creation timestamp', required: false })
+  created_at?: Date;
+}

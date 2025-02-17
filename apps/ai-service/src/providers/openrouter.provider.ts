@@ -1,4 +1,11 @@
-import { AIProvider, AIProviderConfig, AIQueryParams, AIResponse, ChatQueryParams, ChatResponse } from '@investing/common';
+import {
+  AIProvider,
+  AIProviderConfig,
+  AIQueryParams,
+  AIResponse,
+  ChatQueryParams,
+  ChatResponse,
+} from '@investing/common';
 import { ChatOpenAI } from '@langchain/openai';
 
 export class OpenRouterProvider implements AIProvider {
@@ -32,27 +39,29 @@ export class OpenRouterProvider implements AIProvider {
     const client = this.createClient({
       apiKey: process.env.OPENROUTER_API_KEY,
       baseURL: process.env.OPENROUTER_BASE_URL,
-      model: params.model
+      model: params.model,
     });
     const startTime = Date.now();
-    
+
     try {
       const result = await client.invoke(params.prompt);
-      const content = Array.isArray(result.content) 
-        ? result.content.map(c => typeof c === 'string' ? c : JSON.stringify(c)).join(' ')
-        : typeof result.content === 'string' 
-          ? result.content 
+      const content = Array.isArray(result.content)
+        ? result.content
+            .map((c) => (typeof c === 'string' ? c : JSON.stringify(c)))
+            .join(' ')
+        : typeof result.content === 'string'
+          ? result.content
           : JSON.stringify(result.content);
-      
+
       return {
         text: content,
         usage: {
           prompt_tokens: Math.ceil(params.prompt.length / 4),
           completion_tokens: Math.ceil(content.length / 4),
-          total_tokens: Math.ceil((params.prompt.length + content.length) / 4)
+          total_tokens: Math.ceil((params.prompt.length + content.length) / 4),
         },
         model: params.model || this.defaultModel,
-        created_at: new Date(startTime)
+        created_at: new Date(startTime),
       };
     } catch (error) {
       throw new Error(`OpenRouter query failed: ${error.message}`);
@@ -63,35 +72,39 @@ export class OpenRouterProvider implements AIProvider {
     const client = this.createClient({
       apiKey: process.env.OPENROUTER_API_KEY,
       baseURL: process.env.OPENROUTER_BASE_URL,
-      model: params.model
+      model: params.model,
     });
     const startTime = Date.now();
-    
+
     try {
-      const messages = params.messages.map(msg => ({
+      const messages = params.messages.map((msg) => ({
         role: msg.role,
-        content: msg.content
+        content: msg.content,
       }));
 
       const result = await client.invoke(messages);
-      const content = Array.isArray(result.content) 
-        ? result.content.map(c => typeof c === 'string' ? c : JSON.stringify(c)).join(' ')
-        : typeof result.content === 'string' 
-          ? result.content 
+      const content = Array.isArray(result.content)
+        ? result.content
+            .map((c) => (typeof c === 'string' ? c : JSON.stringify(c)))
+            .join(' ')
+        : typeof result.content === 'string'
+          ? result.content
           : JSON.stringify(result.content);
-      
+
       return {
         message: {
           role: 'assistant',
-          content: content
+          content: content,
         },
         usage: {
           prompt_tokens: Math.ceil(JSON.stringify(messages).length / 4),
           completion_tokens: Math.ceil(content.length / 4),
-          total_tokens: Math.ceil((JSON.stringify(messages).length + content.length) / 4)
+          total_tokens: Math.ceil(
+            (JSON.stringify(messages).length + content.length) / 4,
+          ),
         },
         model: params.model || this.defaultModel,
-        created_at: new Date(startTime)
+        created_at: new Date(startTime),
       };
     } catch (error) {
       throw new Error(`OpenRouter chat failed: ${error.message}`);

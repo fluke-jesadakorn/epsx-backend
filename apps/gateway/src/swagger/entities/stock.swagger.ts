@@ -1,127 +1,133 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { PaginatedResponse } from './common.swagger';
 
-export class StockDto {
-  @ApiProperty({
-    type: String,
-    example: 'AAPL'
-  })
+export class StockResponse {
+  @ApiProperty({ description: 'Stock symbol', example: 'AAPL' })
   symbol: string;
 
-  @ApiProperty({
-    type: String,
-    example: 'Apple Inc.'
-  })
-  company_name: string;
+  @ApiProperty({ description: 'Company name', example: 'Apple Inc.' })
+  name: string;
 
-  @ApiProperty({
-    type: String,
-    example: '507f1f77bcf86cd799439011'
-  })
-  exchange: string;
-
-  @ApiProperty({
-    type: String,
-    format: 'date-time',
-    example: '2024-02-15T04:11:16.789Z'
-  })
-  last_updated?: Date;
+  @ApiProperty({ description: 'Current price', example: 175.0 })
+  price: number;
 }
 
-export class StockResponse extends StockDto {
-  @ApiProperty({
-    type: String,
-    format: 'date-time',
-    example: '2024-02-15T04:11:16.789Z'
-  })
-  createdAt: string;
+export class PaginatedStockResponse {
+  @ApiProperty({ description: 'Total number of items' })
+  total: number;
 
-  @ApiProperty({
-    type: String,
-    format: 'date-time',
-    example: '2024-02-15T04:11:16.789Z'
-  })
-  updatedAt: string;
-}
-
-export class PaginatedStockResponse extends PaginatedResponse {
-  @ApiProperty({
-    type: [StockResponse]
-  })
+  @ApiProperty({ description: 'List of stocks', type: [StockResponse] })
   data: StockResponse[];
 }
 
 export class StockScreenerResponseDto {
-  @ApiProperty({
-    type: String,
-    example: 'NYSE'
-  })
-  exchange: string;
+  @ApiProperty({ description: 'Stock symbol', example: 'AAPL' })
+  symbol: string;
 
-  @ApiProperty({
-    type: [Object],
-    example: [
-      {
-        symbol: 'AAPL',
-        company_name: 'Apple Inc.',
-        current_price: 175.84,
-        change_percent: 2.45,
-        volume: 65432100,
-        market_cap: 2850000000000
-      }
-    ]
-  })
-  stocks: Array<{
-    symbol: string;
-    company_name: string;
-    current_price?: number;
-    change_percent?: number;
-    volume?: number;
-    market_cap?: number;
-  }>;
+  @ApiProperty({ description: 'Company name', example: 'Apple Inc.' })
+  name: string;
 
-  @ApiProperty({
-    type: Object,
-    example: {
-      processed: 100,
-      invalid: 0,
-      total: 100
-    }
-  })
-  metadata: {
-    processed: number;
-    invalid: number;
-    total: number;
-  };
-
-  @ApiProperty({
-    type: String,
-    format: 'date-time',
-    example: '2024-02-15T04:11:16.789Z'
-  })
-  scrapedAt: string;
+  @ApiProperty({ description: 'Industry sector', example: 'Technology' })
+  sector: string;
 }
 
-// Future Features Documentation
-/**
- * TODO: Add documentation for future features:
- * - Real-time price update types
- * - Historical OHLCV data types
- * - Technical indicators response types
- * - Market breadth analysis types
- * - Volatility indices types
- * - Stock performance metrics types
- * - Trading signals response types
- * - WebSocket streaming types
- * - Chart pattern analysis types
- * - Custom stock screener types
- */
+export class ScrapingSummaryResponse {
+  @ApiProperty({ 
+    description: 'Total number of exchanges that were processed',
+    example: 5,
+    minimum: 0 
+  })
+  totalExchanges: number;
 
-// Future Properties for Stock DTO:
-/**
- * @ApiProperty() market_cap?: number;
- * @ApiProperty() volume?: number;
- * @ApiProperty() pe_ratio?: number;
- * @ApiProperty() dividend_yield?: number;
- * @ApiProperty() price_history?: { date: Date; price: number }[];
- */
+  @ApiProperty({ 
+    description: 'Number of exchanges successfully processed without errors',
+    example: 4,
+    minimum: 0 
+  })
+  processedExchanges: number;
+
+  @ApiProperty({ 
+    description: 'Total number of stocks found across all exchanges',
+    example: 1000,
+    minimum: 0 
+  })
+  totalStocks: number;
+
+  @ApiProperty({ 
+    description: 'Number of new unique stocks added to the database',
+    example: 50,
+    minimum: 0 
+  })
+  newStocks: number;
+
+  @ApiProperty({ 
+    description: 'Number of exchanges that encountered errors during processing',
+    example: 1,
+    minimum: 0 
+  })
+  failedExchanges: number;
+
+  @ApiProperty({ 
+    description: 'Detailed error messages for failed operations',
+    example: [
+      'Failed to fetch data for NYSE: Rate limit exceeded',
+      'Invalid data format received for NASDAQ'
+    ],
+    isArray: true
+  })
+  errors: string[];
+}
+
+export class StockScreenerFilters {
+  @ApiProperty({
+    description: 'Industry sectors to include',
+    example: ['Technology', 'Healthcare', 'Finance'],
+    isArray: true,
+    required: false
+  })
+  sectors?: string[];
+
+  @ApiProperty({
+    description: 'Geographic regions to filter by',
+    example: ['North America', 'APAC', 'Europe'],
+    isArray: true,
+    required: false
+  })
+  regions?: string[];
+
+  @ApiProperty({
+    description: 'Minimum market capitalization in millions USD',
+    example: 1000,
+    minimum: 0,
+    required: false
+  })
+  minMarketCap?: number;
+
+  @ApiProperty({
+    description: 'Minimum daily trading volume',
+    example: 100000,
+    minimum: 0,
+    required: false
+  })
+  minVolume?: number;
+}
+
+// Success responses
+export class ScrapingSuccessResponse {
+  @ApiProperty({
+    description: 'Success status of the operation',
+    example: true
+  })
+  success: boolean;
+
+  @ApiProperty({
+    description: 'Time taken to complete the operation in milliseconds',
+    example: 5432
+  })
+  duration: number;
+
+  @ApiProperty({
+    description: 'Summary of the scraping operation',
+    type: ScrapingSummaryResponse
+  })
+  summary: ScrapingSummaryResponse;
+}

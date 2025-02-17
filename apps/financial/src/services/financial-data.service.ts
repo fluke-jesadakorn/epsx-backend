@@ -10,13 +10,18 @@ export class FinancialDataService {
     maxAttempts: 3,
     initialDelay: 500,
     maxDelay: 5000,
-    retryableErrors: ['MongoError', 'MongoNetworkError', 'MongoServerError', 'WriteConflict'],
+    retryableErrors: [
+      'MongoError',
+      'MongoNetworkError',
+      'MongoServerError',
+      'WriteConflict',
+    ],
   };
 
   constructor(
     @InjectModel(Financial.name)
     private readonly financialModel: Model<Financial>,
-    private readonly logger: LoggerUtil
+    private readonly logger: LoggerUtil,
   ) {}
 
   private handleError(operation: string, error: Error): never {
@@ -54,7 +59,9 @@ export class FinancialDataService {
                 eps: '$eps_basic',
                 eps_growth: '$eps_growth',
                 last_report_date: '$report_date',
-                rank: { $add: [skip, { $indexOfArray: ['$data', '$$ROOT'] }, 1] },
+                rank: {
+                  $add: [skip, { $indexOfArray: ['$data', '$$ROOT'] }, 1],
+                },
               },
             },
           ],
@@ -89,7 +96,11 @@ export class FinancialDataService {
     }
   }
 
-  async findExistingFinancial(stockId: string, fiscalYear: number, fiscalQuarter: number) {
+  async findExistingFinancial(
+    stockId: string,
+    fiscalYear: number,
+    fiscalQuarter: number,
+  ) {
     return this.financialModel.findOne({
       stock: stockId,
       fiscal_year: fiscalYear,
@@ -99,7 +110,9 @@ export class FinancialDataService {
 
   async updateFinancialData(id: string, updateData: Partial<Financial>) {
     try {
-      return await this.financialModel.findByIdAndUpdate(id, updateData, { new: true });
+      return await this.financialModel.findByIdAndUpdate(id, updateData, {
+        new: true,
+      });
     } catch (error) {
       this.handleError('update financial data', error);
     }

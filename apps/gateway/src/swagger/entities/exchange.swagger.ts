@@ -4,37 +4,37 @@ import { PaginatedResponse } from './common.swagger';
 export class ExchangeDto {
   @ApiProperty({
     type: String,
-    example: 'New York Stock Exchange'
+    example: 'New York Stock Exchange',
   })
   exchange_name: string;
 
   @ApiProperty({
     type: String,
-    example: 'United States'
+    example: 'United States',
   })
   country: string;
 
   @ApiProperty({
     type: String,
-    example: 'NYSE'
+    example: 'NYSE',
   })
   market_code: string;
 
   @ApiProperty({
     type: String,
-    example: 'USD'
+    example: 'USD',
   })
   currency: string;
 
   @ApiProperty({
     type: String,
-    example: 'https://www.nyse.com'
+    example: 'https://www.nyse.com',
   })
   exchange_url: string;
 
   @ApiProperty({
     type: String,
-    example: 'America/New_York'
+    example: 'America/New_York',
   })
   timezone: string;
 }
@@ -45,28 +45,28 @@ export class UpdateExchangeRequest implements Partial<ExchangeDto> {
   @ApiProperty({
     type: String,
     example: 'New York Stock Exchange',
-    required: false
+    required: false,
   })
   exchange_name?: string;
 
   @ApiProperty({
     type: String,
     example: 'United States',
-    required: false
+    required: false,
   })
   country?: string;
 
   @ApiProperty({
     type: String,
     example: 'https://www.nyse.com',
-    required: false
+    required: false,
   })
   exchange_url?: string;
 
   @ApiProperty({
     type: String,
     example: 'America/New_York',
-    required: false
+    required: false,
   })
   timezone?: string;
 }
@@ -74,40 +74,35 @@ export class UpdateExchangeRequest implements Partial<ExchangeDto> {
 export class ExchangeResponse extends ExchangeDto {
   @ApiProperty({
     type: String,
-    example: '2024-02-15T04:11:16.789Z'
+    example: '2024-02-15T04:11:16.789Z',
   })
   createdAt: string;
 
   @ApiProperty({
     type: String,
-    example: '2024-02-15T04:11:16.789Z'
+    example: '2024-02-15T04:11:16.789Z',
   })
   updatedAt: string;
 }
 
-export class PaginatedExchangeResponse extends PaginatedResponse {
-  @ApiProperty({
-    type: [ExchangeResponse]
-  })
-  data: ExchangeResponse[];
-}
+export class PaginatedExchangeResponse extends PaginatedResponse<ExchangeResponse> {}
 
 export class ScrapeExchangeResponse {
   @ApiProperty({
     type: Number,
-    example: 5
+    example: 5,
   })
   exchangesScraped: number;
 
   @ApiProperty({
     type: [String],
-    example: ['NYSE', 'NASDAQ', 'LSE', 'TSE', 'SSE']
+    example: ['NYSE', 'NASDAQ', 'LSE', 'TSE', 'SSE'],
   })
   marketCodes: string[];
 
   @ApiProperty({
     type: String,
-    example: '2024-02-15T04:11:16.789Z'
+    example: '2024-02-15T04:11:16.789Z',
   })
   lastScrapedAt: string;
 }

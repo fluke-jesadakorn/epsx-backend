@@ -72,7 +72,7 @@ export interface SqlQueryResult {
 
 export interface SqlQueryContext {
   tables: {
-    [key: string]: any;  // Table schema
+    [key: string]: any; // Table schema
   };
   conditions?: any;
   joins?: {

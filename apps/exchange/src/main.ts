@@ -20,16 +20,15 @@ class ErrorFilter implements ExceptionFilter {
       name: error.name,
       cause: (error as any).cause,
     });
-    
-    const ctx = host.switchToHttp();
-    const response = ctx.getResponse();
-    
-    response.status(500).json({
+
+    // Return error response in microservice format
+    return {
+      status: 'error',
       statusCode: 500,
       timestamp: new Date().toISOString(),
       message: error.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-    });
+    };
   }
 }
 
@@ -47,62 +46,65 @@ async function bootstrap() {
   try {
     // Test MongoDB connection
     const mongoose = require('mongoose');
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017', {
-      dbName: process.env.MONGODB_DB_NAME || 'epsx-exchange',
-    });
+    await mongoose.connect(
+      process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017',
+      {
+        dbName: process.env.MONGODB_DB_NAME || 'epsx-exchange',
+      },
+    );
     logger.log('Successfully connected to MongoDB');
 
     const app = await NestFactory.createMicroservice<MicroserviceOptions>(
-    ExchangeModule,
-    {
-      transport: Transport.TCP,
-      options: {
-        host: '0.0.0.0',  // Listen on all interfaces
-        port: parseInt(process.env.EXCHANGE_SERVICE_PORT || '4100'),
-        retryAttempts: 5,
-        retryDelay: 1000,
+      ExchangeModule,
+      {
+        transport: Transport.TCP,
+        options: {
+          host: '0.0.0.0', // Listen on all interfaces
+          port: parseInt(process.env.EXCHANGE_SERVICE_PORT || '4100'),
+          retryAttempts: 5,
+          retryDelay: 1000,
+        },
+        logger: ['error', 'warn', 'log', 'debug', 'verbose'],
       },
-      logger: ['error', 'warn', 'log', 'debug', 'verbose'],
-    },
-  );
+    );
 
-  // Enable validation
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      transform: true,
-    }),
-  );
+    // Enable validation
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+      }),
+    );
 
-  // Add global error handler
-  app.useGlobalFilters(new ErrorFilter());
+    // Add global error handler
+    app.useGlobalFilters(new ErrorFilter());
 
-  await app.listen();
-  logger.log(
-    `Exchange Microservice is listening on port ${process.env.EXCHANGE_SERVICE_PORT || '4100'}`,
-  );
+    await app.listen();
+    logger.log(
+      `Exchange Microservice is listening on port ${process.env.EXCHANGE_SERVICE_PORT || '4100'}`,
+    );
 
-  // Log configuration for debugging
-  logger.debug('Exchange Service Configuration:', {
-    host: process.env.EXCHANGE_SERVICE_HOST || 'localhost',
-    port: process.env.EXCHANGE_SERVICE_PORT || '4100',
-    nodeEnv: process.env.NODE_ENV || 'development',
-  });
+    // Log configuration for debugging
+    logger.debug('Exchange Service Configuration:', {
+      host: process.env.EXCHANGE_SERVICE_HOST || 'localhost',
+      port: process.env.EXCHANGE_SERVICE_PORT || '4100',
+      nodeEnv: process.env.NODE_ENV || 'development',
+    });
 
-  // Graceful shutdown
-  process.on('SIGTERM', async () => {
-    logger.log('Received SIGTERM, starting graceful shutdown...');
-    await app.close();
-    logger.log('Exchange microservice terminated gracefully');
-    process.exit(0);
-  });
+    // Graceful shutdown
+    process.on('SIGTERM', async () => {
+      logger.log('Received SIGTERM, starting graceful shutdown...');
+      await app.close();
+      logger.log('Exchange microservice terminated gracefully');
+      process.exit(0);
+    });
 
-  process.on('SIGINT', async () => {
-    logger.log('Received SIGINT, starting graceful shutdown...');
-    await app.close();
-    logger.log('Exchange microservice terminated gracefully');
-    process.exit(0);
-  });
+    process.on('SIGINT', async () => {
+      logger.log('Received SIGINT, starting graceful shutdown...');
+      await app.close();
+      logger.log('Exchange microservice terminated gracefully');
+      process.exit(0);
+    });
 
     // Handle unhandled promise rejections
     process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {

@@ -18,7 +18,10 @@ export class FinancialFetchService {
       // This is a placeholder that should be replaced with actual implementation
       return { success: true, data: {} };
     } catch (error) {
-      this.logger.error(`Failed to fetch data for ${symbol}: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to fetch data for ${symbol}: ${error.message}`,
+        error.stack,
+      );
       return { success: false };
     }
   }
