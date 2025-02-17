@@ -5,18 +5,41 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 COPY bun.lock ./
+COPY nest-cli.json ./
+COPY tsconfig*.json ./
 
 # Copy workspace configuration and packages
 COPY apps/*/package*.json ./apps/
+COPY apps/*/tsconfig*.json ./apps/
 
-# Install dependencies
-RUN bun install
+# Install dependencies, npm, and NestJS CLI globally
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \
+    apt-get install -y nodejs && \
+    bun install && \
+    npm install -g @nestjs/cli && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy source code
 COPY . .
 
-# Build all services
-RUN bun run build:all
+# Build all services with specific output paths
+RUN mkdir -p /app/dist/apps && \
+    nest build ai-service -p apps/ai-service/tsconfig.json && \
+    nest build exchange -p apps/exchange/tsconfig.json && \
+    nest build financial -p apps/financial/tsconfig.json && \
+    nest build gateway -p apps/gateway/tsconfig.json && \
+    nest build stock -p apps/stock/tsconfig.json && \
+    ls -la apps/*/dist/ && \
+    # Move build outputs to expected location
+    for service in ai-service exchange financial gateway stock; do \
+        if [ -d "apps/$service/dist" ]; then \
+            mv "apps/$service/dist" "/app/dist/apps/$service"; \
+        fi \
+    done && \
+    # Verify build outputs
+    ls -la /app/dist/apps/
 
 # Runtime stage
 FROM oven/bun:latest
@@ -25,7 +48,16 @@ WORKDIR /app
 # Copy necessary files from builder
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/bun.lock ./
-COPY --from=builder /app/apps ./apps
+
+# Create target directories
+RUN mkdir -p ./apps/dist
+
+# Copy dist files with specific paths for each service
+COPY --from=builder /app/dist/apps/ai-service ./apps/dist/ai-service
+COPY --from=builder /app/dist/apps/stock ./apps/dist/stock
+COPY --from=builder /app/dist/apps/financial ./apps/dist/financial
+COPY --from=builder /app/dist/apps/exchange ./apps/dist/exchange
+COPY --from=builder /app/dist/apps/gateway ./apps/dist/gateway
 COPY --from=builder /app/node_modules ./node_modules
 
 # Environment setup for inter-service communication
@@ -59,3 +91,7 @@ LABEL org.opencontainers.image.source="https://github.com/yourusername/epsx-back
 # - Implement graceful shutdown
 # - Add monitoring and tracing capabilities
 # - Configure rate limiting
+# - Consider multi-stage build optimization for smaller image size
+# - Add build args for environment configuration
+# - Consider implementing health checks for individual services
+# - Add volume mounts for persistent data if needed

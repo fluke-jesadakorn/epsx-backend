@@ -8,7 +8,7 @@
   "sourceMap": false,
   "compilerOptions": {
     "composite": true,
-    "outDir": "./dist",
+    "outDir": "../dist",
     "baseUrl": "./",
     "paths": {
       "@apps/*": ["../../apps/*"]
