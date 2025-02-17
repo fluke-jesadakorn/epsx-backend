@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import { AIProvider, ProviderType } from '@investing/common';
+import { AIProvider, ProviderType } from '../types/interfaces';
 import { OllamaProvider } from './ollama.provider';
 import { OpenRouterProvider } from './openrouter.provider';
 

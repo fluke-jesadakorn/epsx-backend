@@ -6,7 +6,7 @@ import {
   ChatQueryDto,
   AIResponseDto,
   ChatResponseDto,
-} from '@investing/common';
+} from '../../swagger/entities/ai-service.swagger';
 import { of, throwError } from 'rxjs';
 
 describe('AiController', () => {
@@ -56,6 +56,7 @@ describe('AiController', () => {
         total_tokens: 35,
       },
       model: 'gpt-4',
+      created_at: new Date(),
     };
 
     it('should successfully process a query', async () => {
@@ -126,6 +127,7 @@ describe('AiController', () => {
         total_tokens: 45,
       },
       model: 'gpt-4',
+      created_at: new Date(),
     };
 
     it('should successfully process a chat message', async () => {

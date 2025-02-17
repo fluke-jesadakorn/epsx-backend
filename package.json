@@ -1,8 +1,7 @@
 {
   "name": "epsx-backend",
   "workspaces": [
-    "apps/*",
-    "libs/*"
+    "apps/*"
   ],
   "scripts": {
     "test": "jest",
@@ -10,22 +9,27 @@
     "test:cov": "jest --coverage",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
     "start": "bun run start:all",
-    "build:common": "cd libs/common && bun run build",
-    "build": "bun run build:common && nest build",
-    "build:ai": "bun run build:common && nest build ai-service",
-    "build:exchange": "bun run build:common && nest build exchange",
-    "build:financial": "bun run build:common && nest build financial",
-    "build:gateway": "bun run build:common && nest build gateway",
+    "build": "nest build",
+    "build:ai": "nest build ai-service",
+    "build:exchange": "nest build exchange",
+    "build:financial": "nest build financial",
+    "build:gateway": "nest build gateway",
     "build:health": "nest build health",
     "build:stock": "nest build stock",
     "start:gateway": "cd apps/gateway && bun run start:dev",
-    "start:dev": "cd apps/gateway && bun run start:dev",
+    "start:gateway:prod": "cd apps/gateway && bun run start",
     "start:ai": "cd apps/ai-service && bun run start:dev",
+    "start:ai:prod": "cd apps/ai-service && bun run start",
     "start:exchange": "cd apps/exchange && bun run start:dev",
+    "start:exchange:prod": "cd apps/exchange && bun run start",
     "start:financial": "cd apps/financial && bun run start:dev",
+    "start:financial:prod": "cd apps/financial && bun run start",
     "start:stock": "cd apps/stock && bun run start:dev",
+    "start:stock:prod": "cd apps/stock && bun run start",
     "start:health": "cd apps/health && bun run start:dev",
-    "start:all": "concurrently \"bun run start:gateway\" \"bun run start:ai\" \"bun run start:exchange\" \"bun run start:financial\" \"bun run start:stock\"",
+    "build:all": "bun run build:ai && bun run build:exchange && bun run build:financial && bun run build:gateway && bun run build:stock",
+    "start:dev": "concurrently \"bun run start:gateway\" \"bun run start:ai\" \"bun run start:exchange\" \"bun run start:financial\" \"bun run start:stock\"",
+    "start:all": "concurrently \"bun run start:gateway:prod\" \"bun run start:ai:prod\" \"bun run start:exchange:prod\" \"bun run start:financial:prod\" \"bun run start:stock:prod\"",
     "lint": "eslint '{apps,libs}/**/*.ts' --fix"
   },
   "devDependencies": {
@@ -61,7 +65,6 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
-    "@investing/common": "workspace:*",
     "@langchain/community": "^0.3.29",
     "@langchain/openai": "^0.4.3",
     "@nestjs/axios": "^4.0.0",

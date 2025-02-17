@@ -4,7 +4,7 @@ import {
   ChatQueryParams,
   AIResponse,
   ChatResponse,
-} from '@investing/common/src';
+} from '../../types/ai.types';
 
 export class AIQueryDto implements AIQueryParams {
   @ApiProperty({
@@ -59,7 +59,7 @@ export class ChatQueryDto implements ChatQueryParams {
     description: 'Array of chat messages',
     type: [ChatMessageDto],
   })
-  messages: Array<{ role: string; content: string }>;
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
 
   @ApiProperty({ description: 'Optional market context data', required: false })
   market_context?: any;
@@ -100,8 +100,8 @@ export class AIResponseDto implements AIResponse {
   @ApiProperty({ description: 'Model used for generation' })
   model: string;
 
-  @ApiProperty({ description: 'Response creation timestamp', required: false })
-  created_at?: Date;
+  @ApiProperty({ description: 'Response creation timestamp' })
+  created_at: Date;
 }
 
 export class ChatMessageResponseDto {
@@ -109,7 +109,7 @@ export class ChatMessageResponseDto {
     description: 'Role of the message sender',
     example: 'assistant',
   })
-  role: string;
+  role: "system" | "user" | "assistant";
 
   @ApiProperty({ description: 'Content of the message' })
   content: string;
@@ -125,6 +125,6 @@ export class ChatResponseDto implements ChatResponse {
   @ApiProperty({ description: 'Model used for chat' })
   model: string;
 
-  @ApiProperty({ description: 'Response creation timestamp', required: false })
-  created_at?: Date;
+  @ApiProperty({ description: 'Response creation timestamp' })
+  created_at: Date;
 }

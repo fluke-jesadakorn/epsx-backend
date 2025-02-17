@@ -1,38 +1,30 @@
-// AI Provider Types
-export interface AIProviderConfig {
-  baseURL: string;
-  apiKey?: string;
-  model?: string;
-  timeout?: number;
-  maxRetries?: number;
-  headers?: Record<string, string>;
-}
+// AI Query Types
+import { ProviderType, AIProviderConfig, AIMessage, AIRequestOptions, AIProvider } from './interfaces';
 
+export { ProviderType, AIProviderConfig, AIMessage, AIRequestOptions, AIProvider };
+
+// Provider Configs
 export interface OpenRouterConfig extends AIProviderConfig {
-  siteUrl?: string;
+  type: ProviderType.OPENROUTER;
 }
 
 export interface OllamaConfig extends AIProviderConfig {
-  modelPath?: string;
+  type: ProviderType.OLLAMA;
 }
 
-export interface AIProvider {
-  createClient(config: AIProviderConfig): any;
-}
-
-export interface AIMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-export interface AIRequestOptions {
-  temperature?: number;
-  maxTokens?: number;
+export interface AiQueryResponse {
+  success: boolean;
+  data: any[];
+  analysis: string;
+  meta: {
+    executionTime: number;
+    timestamp: string;
+  };
 }
 
 export interface AIResponseValidation {
-  requiredFields: string[];
-  format?: string;
+  isValid: boolean;
+  errors?: string[];
 }
 
 export interface AIError {
@@ -41,72 +33,57 @@ export interface AIError {
   details?: any;
 }
 
-export type ProviderType = 'openrouter' | 'ollama';
-
 export interface ProviderFactoryConfig {
-  type: ProviderType;
-  config: AIProviderConfig;
+  providers: {
+    [key in ProviderType]?: AIProviderConfig;
+  };
+  defaultProvider: ProviderType;
 }
 
-// Query Types
-export interface RawQueryResultSchema {
-  columns: string[];
-  rows: any[];
-}
-
-export interface BaseQueryResponseSchema {
-  success: boolean;
-  message?: string;
-  error?: string;
-}
-
-export interface CompleteQueryResponseSchema extends BaseQueryResponseSchema {
-  data: any[];
-  metadata?: any;
-}
-
+// SQL Query Types
 export interface SqlQueryResult {
   query: string;
-  params?: any[];
+  params: any[];
+  results: any[];
 }
 
 export interface SqlQueryContext {
   tables: {
-    [key: string]: any; // Table schema
+    [key: string]: any;
   };
-  conditions?: any;
   joins?: {
     [key: string]: {
       table: string;
       condition: string;
     };
-  };
-  views?: {
-    [key: string]: string;
-  };
-}
+    };
+    views?: {
+      [key: string]: string;
+    };
+  }
 
 export interface SqlQueryValidation {
-  paramTypes: {
-    [key: string]: string;
-  };
-  requiredParams?: string[];
-  requiredTables?: string[];
-  allowedOperations?: string[];
-}
+    paramTypes?: {
+      [key: string]: string;
+      };
+      allowedOperations?: string[];
+      requiredTables?: string[];
+      isValid?: boolean;
+      errors?: string[];
+    }
 
 export interface QueryTemplate {
-  name: string;
-  template: string;
-  validation?: SqlQueryValidation;
-}
+      name: string;
+      template: string;
+      description?: string;
+      parameters: string[];
+    }
 
-export interface AiQueryResponse {
-  success: boolean;
-  data?: any;
-  error?: string;
-  analysis?: string;
-  meta?: {
-    [key: string]: any;
-  };
-}
+// TODO: Future enhancements
+// - Add support for streaming responses
+// - Add function calling types
+// - Add multi-modal input types
+// - Add response quality metric types
+// - Add response templating types
+// - Add query optimization types
+// - Add table relationship types

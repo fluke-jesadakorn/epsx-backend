@@ -4,15 +4,19 @@
     "declaration": true,
     "outDir": "../../dist/apps/gateway",
     "composite": true,
-    "baseUrl": "../../",
+    "baseUrl": "./",
     "module": "CommonJS",
-    "rootDir": "src",
-    "moduleResolution": "Node"
+    "rootDir": "../../",
+    "moduleResolution": "Node",
+    "paths": {
+      "@libs/common": ["../../libs/common"],
+      "@libs/common/*": ["../../libs/common/*"]
+    }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"],
-  "paths": {
-    "@investing/common": ["../../libs/common/src"],
-    "@investing/common/*": ["../../libs/common/src/*"]
-  }
+  "include": ["src/**/*", "../../libs/common/src/**/*"],
+  "exclude": ["node_modules", "dist"],
+  "incremental": false,
+  "declaration": false,
+  "tsBuildInfoFile": false,
+  "sourceMap": false
 }

@@ -36,6 +36,8 @@ export class StockController {
 
   @MessagePattern({ cmd: 'scrapeAllStocks' })
   async scrapeAllStocks() {
+    // TODO: Add check for exchanges setup before scraping
+    // Consider checking exchange collection and populating if empty
     return this.stockService.scrapeAllStocks();
   }
 

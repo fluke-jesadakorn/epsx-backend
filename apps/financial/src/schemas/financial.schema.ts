@@ -1,12 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
-import { IFinancial } from '@investing/common';
 
 @Schema({
   timestamps: true,
   collection: 'financials',
 })
-export class Financial extends Document implements IFinancial {
+export class Financial extends Document {
   @Prop()
   create_by?: string;
 

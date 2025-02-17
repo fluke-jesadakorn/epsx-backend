@@ -1,4 +1,7 @@
 {
   "extends": "./tsconfig.json",
-  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"]
+  "exclude": ["node_modules", "test", "dist", "**/*spec.ts"],
+  "incremental": false,
+  "tsBuildInfoFile": false
+  // TODO: Add more build configurations for different environments
 }

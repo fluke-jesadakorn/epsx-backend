@@ -147,7 +147,9 @@ export class StockService {
               );
 
             if (!stockData) {
-              this.logger.error(`Failed to fetch data for exchange ${exchange.market_code}`);
+              this.logger.error(
+                `Failed to fetch data for exchange ${exchange.market_code}`,
+              );
               return;
             }
 
@@ -213,18 +215,20 @@ export class StockService {
                     {
                       $push: {
                         stocks: {
-                          $each: createdStocks.map(stock => stock._id)
-                        }
-                      }
+                          $each: createdStocks.map((stock) => stock._id),
+                        },
+                      },
                     },
-                    { new: true }
+                    { new: true },
                   );
 
                   this.logger.log(
                     `Inserted ${newStocks.length} new stocks and updated exchange references`,
                   );
                 } catch (error) {
-                  this.logger.error(`Failed to insert stocks batch: ${error.message}`);
+                  this.logger.error(
+                    `Failed to insert stocks batch: ${error.message}`,
+                  );
                   // TODO: Add rollback mechanism for partial failures
                 }
               }
@@ -239,17 +243,16 @@ export class StockService {
               `Exchange ${exchange.market_code} processing completed. Processed ${processedCount} stocks.`,
             );
           } catch (error) {
-            this.logger.error(`Error processing exchange ${exchange.market_code}: ${error.message}`);
+            this.logger.error(
+              `Error processing exchange ${exchange.market_code}: ${error.message}`,
+            );
             // TODO: Implement retry mechanism for failed exchange requests
           }
         });
 
         await Promise.all(batchPromises);
 
-        if (
-          i + STOCK_CONFIG.maxParallelRequests <
-          existingExchanges.length
-        ) {
+        if (i + STOCK_CONFIG.maxParallelRequests < existingExchanges.length) {
           this.logger.log(
             `Waiting ${STOCK_CONFIG.batchDelay}ms before processing next batch...`,
           );
@@ -266,10 +269,10 @@ export class StockService {
   /**
    * Scrape stock data from exchanges with improved error handling and performance
    * Similar to saveStockData but with additional features and optimizations
-   * 
+   *
    * @param exchangeIds Optional array of exchange IDs to scrape. If not provided, scrapes all exchanges.
    * @returns Summary of the scraping operation
-   * 
+   *
    * TODO: Future Improvements
    * 1. Add atomic transactions for consistent data
    * 2. Implement bulk operations for better performance
@@ -284,20 +287,25 @@ export class StockService {
    */
   async scrapeStockData(exchangeIds?: string[]) {
     this.logger.log('Starting stock data scraping process');
-    
+
     let existingExchanges;
     try {
       if (exchangeIds?.length) {
-        existingExchanges = await this.exchangeModel.find({
-          _id: { $in: exchangeIds }
-        }).exec();
+        existingExchanges = await this.exchangeModel
+          .find({
+            _id: { $in: exchangeIds },
+          })
+          .exec();
         if (!existingExchanges.length) {
           throw new NotFoundException('No exchanges found with provided IDs');
         }
       } else {
-        existingExchanges = await this.exchangeModel.find().exec();
-      }
-    } catch (error) {
+    existingExchanges = await this.exchangeModel.find().exec();
+    if (!existingExchanges.length) {
+      throw new NotFoundException('No exchanges found in database. Please ensure exchanges are populated before scraping stocks.');
+    }
+  }
+} catch (error) {
       this.logger.error(`Failed to fetch exchanges: ${error.message}`);
       throw new BadRequestException('Failed to fetch exchanges');
     }
@@ -308,14 +316,21 @@ export class StockService {
       totalStocks: 0,
       newStocks: 0,
       failedExchanges: 0,
-      errors: [] as string[]
+      errors: [] as string[],
     };
 
     try {
-      for (let i = 0; i < existingExchanges.length; i += STOCK_CONFIG.maxParallelRequests) {
-        const batch = existingExchanges.slice(i, i + STOCK_CONFIG.maxParallelRequests);
+      for (
+        let i = 0;
+        i < existingExchanges.length;
+        i += STOCK_CONFIG.maxParallelRequests
+      ) {
+        const batch = existingExchanges.slice(
+          i,
+          i + STOCK_CONFIG.maxParallelRequests,
+        );
         this.logger.log(
-          `Processing batch ${Math.floor(i / STOCK_CONFIG.maxParallelRequests) + 1} of ${Math.ceil(existingExchanges.length / STOCK_CONFIG.maxParallelRequests)}`
+          `Processing batch ${Math.floor(i / STOCK_CONFIG.maxParallelRequests) + 1} of ${Math.ceil(existingExchanges.length / STOCK_CONFIG.maxParallelRequests)}`,
         );
 
         const batchResults = await Promise.allSettled(
@@ -324,36 +339,48 @@ export class StockService {
               throw new Error(`Exchange ${exchange.market_code} has no ID`);
             }
 
-            const stockData = await this.httpService.fetchStockScreener<StockScreenerResponse>(
-              exchange.market_code
-            );
+            const stockData =
+              await this.httpService.fetchStockScreener<StockScreenerResponse>(
+                exchange.market_code,
+              );
 
             if (!stockData?.data?.data) {
-              throw new Error(`Invalid data structure received for exchange ${exchange.market_code}`);
+              throw new Error(
+                `Invalid data structure received for exchange ${exchange.market_code}`,
+              );
             }
 
             const stocksToProcess = stockData.data.data;
-            let exchangeStats = {
+            const exchangeStats = {
               processedStocks: 0,
-              newStocks: 0
+              newStocks: 0,
             };
 
-            for (let j = 0; j < stocksToProcess.length; j += STOCK_CONFIG.stockBatchSize) {
-              const stockBatch = stocksToProcess.slice(j, j + STOCK_CONFIG.stockBatchSize);
-              const symbols = stockBatch.map(s => s.s);
+            for (
+              let j = 0;
+              j < stocksToProcess.length;
+              j += STOCK_CONFIG.stockBatchSize
+            ) {
+              const stockBatch = stocksToProcess.slice(
+                j,
+                j + STOCK_CONFIG.stockBatchSize,
+              );
+              const symbols = stockBatch.map((s) => s.s);
 
               const existingStocks = await this.stockModel
                 .find({ symbol: { $in: symbols } })
                 .select('symbol')
                 .exec();
 
-              const existingSymbols = new Set(existingStocks.map(s => s.symbol));
+              const existingSymbols = new Set(
+                existingStocks.map((s) => s.symbol),
+              );
               const newStocks = stockBatch
-                .filter(s => !existingSymbols.has(s.s))
-                .map(s => ({
+                .filter((s) => !existingSymbols.has(s.s))
+                .map((s) => ({
                   symbol: s.s,
                   company_name: s.n,
-                  exchange: exchange._id
+                  exchange: exchange._id,
                 }));
 
               if (newStocks.length > 0) {
@@ -363,11 +390,11 @@ export class StockService {
                   {
                     $push: {
                       stocks: {
-                        $each: createdStocks.map(stock => stock._id)
-                      }
-                    }
+                        $each: createdStocks.map((stock) => stock._id),
+                      },
+                    },
                   },
-                  { new: true }
+                  { new: true },
                 );
                 exchangeStats.newStocks += newStocks.length;
               }
@@ -376,13 +403,13 @@ export class StockService {
 
             return {
               exchange: exchange.market_code,
-              ...exchangeStats
+              ...exchangeStats,
             };
-          })
+          }),
         );
 
         // Process batch results
-        batchResults.forEach(result => {
+        batchResults.forEach((result) => {
           if (result.status === 'fulfilled') {
             summary.processedExchanges++;
             summary.totalStocks += result.value.processedStocks;
@@ -394,7 +421,9 @@ export class StockService {
         });
 
         if (i + STOCK_CONFIG.maxParallelRequests < existingExchanges.length) {
-          this.logger.log(`Waiting ${STOCK_CONFIG.batchDelay}ms before next batch...`);
+          this.logger.log(
+            `Waiting ${STOCK_CONFIG.batchDelay}ms before next batch...`,
+          );
           await sleep(STOCK_CONFIG.batchDelay);
         }
       }
@@ -413,7 +442,9 @@ export class StockService {
    * @param maxMarketCap Maximum market cap in millions
    */
   async scrapeStocksByMarketCap(minMarketCap?: number, maxMarketCap?: number) {
-    this.logger.log(`Starting stock scraping by market cap range: ${minMarketCap || 0} - ${maxMarketCap || 'unlimited'}`);
+    this.logger.log(
+      `Starting stock scraping by market cap range: ${minMarketCap || 0} - ${maxMarketCap || 'unlimited'}`,
+    );
     return this.scrapeStockData(); // TODO: Add market cap filtering
   }
 

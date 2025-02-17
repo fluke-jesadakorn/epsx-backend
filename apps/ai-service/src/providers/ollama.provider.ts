@@ -5,7 +5,10 @@ import {
   AIResponse,
   ChatQueryParams,
   ChatResponse,
-} from '@investing/common';
+  ProviderType,
+  AIMessage,
+  AIRequestOptions
+} from '../types/interfaces';
 import { ChatOllama } from '@langchain/community/chat_models/ollama';
 
 export class OllamaProvider implements AIProvider {
@@ -26,12 +29,36 @@ export class OllamaProvider implements AIProvider {
     return client;
   }
 
+  async generateResponse(messages: AIMessage[], options?: AIRequestOptions): Promise<AIMessage> {
+    const client = this.createClient({ type: ProviderType.OLLAMA, model: this.defaultModel });
+    try {
+      const formattedMessages = messages.map(msg => ({
+        type: msg.role === 'assistant' ? 'assistant' : 'user',
+        role: msg.role,
+        content: msg.content
+      }));
+      const result = await client.invoke(formattedMessages);
+      const content = typeof result.content === 'string' ? result.content : JSON.stringify(result.content);
+      return {
+        role: 'assistant',
+        content
+      };
+    } catch (error) {
+      throw new Error(`Ollama generation failed: ${error.message}`);
+    }
+  }
+
   async query(params: AIQueryParams): Promise<AIResponse> {
-    const client = this.createClient({ model: params.model });
+    const client = this.createClient({ type: ProviderType.OLLAMA, model: params.model });
     const startTime = Date.now();
 
     try {
-      const result = await client.invoke(params.prompt);
+      const formattedPrompt = [{
+        type: 'user',
+        role: 'user',
+        content: params.prompt
+      }];
+      const result = await client.invoke(formattedPrompt);
       const content = Array.isArray(result.content)
         ? result.content
             .map((c) => (typeof c === 'string' ? c : JSON.stringify(c)))
@@ -56,7 +83,7 @@ export class OllamaProvider implements AIProvider {
   }
 
   async chat(params: ChatQueryParams): Promise<ChatResponse> {
-    const client = this.createClient({ model: params.model });
+    const client = this.createClient({ type: ProviderType.OLLAMA, model: params.model });
     const startTime = Date.now();
 
     try {
@@ -65,7 +92,12 @@ export class OllamaProvider implements AIProvider {
         content: msg.content,
       }));
 
-      const result = await client.invoke(messages);
+      const formattedMessages = messages.map(msg => ({
+        type: msg.role === 'assistant' ? 'assistant' : 'user',
+        role: msg.role,
+        content: msg.content
+      }));
+      const result = await client.invoke(formattedMessages);
       const content = Array.isArray(result.content)
         ? result.content
             .map((c) => (typeof c === 'string' ? c : JSON.stringify(c)))

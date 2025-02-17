@@ -41,7 +41,10 @@
       "entryFile": "main",
       "sourceRoot": "apps/financial/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/financial/tsconfig.json"
+        "tsConfigPath": "apps/financial/tsconfig.json",
+        "webpack": true,
+        "deleteOutDir": true,
+        "builder": "webpack"
       }
     },
     "exchange": {
@@ -60,15 +63,6 @@
       "sourceRoot": "apps/health/src",
       "compilerOptions": {
         "tsConfigPath": "apps/health/tsconfig.json"
-      }
-    },
-    "common": {
-      "type": "library",
-      "root": "libs/common",
-      "entryFile": "index",
-      "sourceRoot": "libs/common/src",
-      "compilerOptions": {
-        "tsConfigPath": "libs/common/tsconfig.json"
       }
     }
   }

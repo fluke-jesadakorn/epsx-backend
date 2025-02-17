@@ -1,15 +1,12 @@
 {
   "compilerOptions": {
-    "module": "CommonJS",
-    "moduleResolution": "Node",
-    "declaration": true,
+    "module": "commonjs",
     "removeComments": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
     "target": "es2017",
-    "sourceMap": true,
+    "sourceMap": false,
     "outDir": "./dist",
     "baseUrl": "./",
     "incremental": true,
@@ -19,20 +16,13 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
+    "composite": true,
     "paths": {
-      "@investing/common": ["libs/common/dist"],
-      "@investing/common/*": ["libs/common/dist/*"],
-      "@apps/*": ["apps/*"]
+      "@financial/*": ["apps/financial/src/*"],
+      "@database/*": ["apps/database/*"],
+      "@utils/*": ["apps/utils/*"]
     }
   },
-  "files": [],
-  "references": [
-    { "path": "./apps/gateway/tsconfig.json" },
-    { "path": "./apps/stock/tsconfig.json" },
-    { "path": "./apps/financial/tsconfig.json" },
-    { "path": "./apps/health/tsconfig.json" },
-    { "path": "./apps/ai-service/tsconfig.json" },
-    { "path": "./apps/exchange/tsconfig.json" },
-    { "path": "./libs/common/tsconfig.json" }
-  ]
+  "references": [{ "path": "./apps/financial" }],
+  "exclude": ["node_modules", "dist"]
 }

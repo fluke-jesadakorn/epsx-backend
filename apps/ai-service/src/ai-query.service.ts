@@ -98,6 +98,7 @@ export class AiQueryService {
       return {
         query: result.query,
         params: result.parameters || [],
+        results: [], // Initialize with empty array since results will be populated after query execution
       };
     } catch (error) {
       this.logger.error('Error generating SQL query:', error);

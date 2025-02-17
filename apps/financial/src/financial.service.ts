@@ -1,59 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import {
-  PaginationParams,
-  PaginationResult,
   EPSGrowthResult,
   FetchState,
   WorkerConfig,
-} from '@investing/common';
-import { LoggerUtil } from './utils/logger.util';
+} from '@financial/types/financial.types';
 import { FetchStateService } from './services/fetch-state.service';
 import { FinancialDataService } from './services/financial-data.service';
 import { WorkerPoolService } from './services/worker-pool.service';
-
-// Local implementation of retry decorator
-function Retry(config: {
-  maxAttempts: number;
-  initialDelay: number;
-  maxDelay?: number;
-  retryableErrors?: (string | RegExp)[];
-}) {
-  return function (
-    target: any,
-    propertyKey: string,
-    descriptor: PropertyDescriptor,
-  ) {
-    const originalMethod = descriptor.value;
-
-    descriptor.value = async function (...args: any[]) {
-      let delay = config.initialDelay;
-      let attempt = 1;
-
-      while (attempt <= config.maxAttempts) {
-        try {
-          return await originalMethod.apply(this, args);
-        } catch (error: any) {
-          const shouldRetry = config.retryableErrors?.some((pattern) => {
-            if (pattern instanceof RegExp) {
-              return pattern.test(error.message);
-            }
-            return error.name === pattern || error.message.includes(pattern);
-          });
-
-          if (attempt === config.maxAttempts || !shouldRetry) {
-            throw error;
-          }
-
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          delay = Math.min(delay * 2, config.maxDelay || 30000);
-          attempt++;
-        }
-      }
-    };
-
-    return descriptor;
-  };
-}
+import { logger } from '@financial/utils/logger';
+import { Retry, RetryConfig } from '@financial/utils/retry.util';
+import { Paginate } from '@financial/utils/decorators/paginate.decorator';
+import { formatPaginationResponse } from './utils/pagination.util';
+import { PaginationParams, PaginationResult } from './types';
 
 // Worker pool and processing configuration
 const WORKER_CONFIG: WorkerConfig & { pageSize: number } = {
@@ -63,7 +21,7 @@ const WORKER_CONFIG: WorkerConfig & { pageSize: number } = {
 };
 
 // Configuration for database operations retry
-const DB_RETRY_CONFIG = {
+const DB_RETRY_CONFIG: Partial<RetryConfig> = {
   maxAttempts: 3,
   initialDelay: 500,
   maxDelay: 5000,
@@ -80,10 +38,18 @@ const DB_RETRY_CONFIG = {
 interface ProcessPageResult {
   shouldBreak: boolean;
   totalProcessed: number;
-  nextPage?: number;
-  successRate?: number;
-  processingTime?: number;
+  nextPage: number;
+  successRate: number;
+  processingTime: number;
 }
+
+interface ProcessPageBreakResult {
+  shouldBreak: true;
+  totalProcessed: number;
+  nextPage?: never; // Explicitly state nextPage doesn't exist
+}
+
+type PageResult = ProcessPageResult | ProcessPageBreakResult;
 
 @Injectable()
 export class FinancialService {
@@ -91,16 +57,22 @@ export class FinancialService {
     private readonly fetchState: FetchStateService,
     private readonly financialData: FinancialDataService,
     private readonly workerPool: WorkerPoolService,
-    private readonly logger: LoggerUtil,
   ) {}
 
   /**
    * Retrieves EPS growth ranking data with pagination
+   * The @Paginate() decorator will transform this into PaginatedResponse<EPSGrowthResult>
+   */
+  /**
+   * Retrieves EPS growth ranking data with pagination
+   * @returns PaginationResult that will be transformed into PaginatedResponse by @Paginate decorator
    */
   @Retry(DB_RETRY_CONFIG)
+  @Paginate()
   async getEPSGrowthRanking(
     params: PaginationParams = {},
   ): Promise<PaginationResult<EPSGrowthResult>> {
+    // Extract and validate pagination params
     const limit = params.limit || 20;
     const skip = params.skip || 0;
 
@@ -108,19 +80,26 @@ export class FinancialService {
       data: epsData,
       metadata: { total },
     } = await this.financialData.getEPSGrowthData(limit, skip);
+    const ranked = this.mapEPSGrowthData(epsData);
 
-    return {
-      data: epsData,
-      metadata: {
-        total,
-        skip,
-        limit,
-        page: Math.floor(skip / limit) + 1,
-        totalPages: Math.ceil(total / limit),
-        orderBy: params.orderBy,
-        direction: params.direction,
-      },
-    };
+    // Format response with enhanced pagination metadata
+    return formatPaginationResponse(ranked, total, skip, limit);
+  }
+
+  /**
+   * Maps raw EPS data to ranked result format
+   */
+  private mapEPSGrowthData(epsData: any[]): EPSGrowthResult[] {
+    return epsData.map((item) => ({
+      symbol: item.symbol,
+      company_name: item.company_name,
+      market_code: item.market_code,
+      exchange_name: item.exchange_name,
+      eps: item.eps,
+      eps_growth: item.eps_growth,
+      rank: item.rank,
+      last_report_date: item.last_report_date,
+    }));
   }
 
   /**
@@ -143,38 +122,39 @@ export class FinancialService {
         }
 
         totalProcessed = result.totalProcessed;
-        currentPage = result.nextPage || currentPage + 1;
-        const successRate = result.successRate || 1;
-        const processingTime = result.processingTime || 0;
+        currentPage = result.nextPage;
 
         // Update state after successful processing
         await this.updateFetchState({
-          currentPage,
-          totalProcessed,
+          currentPage: currentPage,
+          totalProcessed: totalProcessed,
           lastProcessedStock: null,
           lastUpdated: new Date().toISOString(),
-        });
+        } as FetchState);
 
         // Apply adaptive delay before next page
-        const delay = this.calculateAdaptiveDelay(successRate, processingTime);
-        if (delay > 0) {
-          this.logger.log(
-            `Waiting ${delay}ms before next page (Success rate: ${(
-              successRate * 100
-            ).toFixed(1)}%)...`,
+        if ('processingTime' in result && 'successRate' in result) {
+          const delay = this.calculateAdaptiveDelay(
+            result.successRate,
+            result.processingTime,
           );
-          await WorkerPoolService.sleep(delay);
+          if (delay > 0) {
+            logger.info(
+              `Waiting ${delay}ms before next page (Success rate: ${(result.successRate * 100).toFixed(1)}%)...`,
+            );
+            await WorkerPoolService.sleep(delay);
+          }
         }
       }
 
-      this.logger.log(
+      logger.info(
         `Financial data processing completed. Total stocks processed: ${totalProcessed}`,
       );
 
       await this.fetchState.clearState();
       return totalProcessed;
     } catch (error) {
-      this.logger.error('Fatal error during financial data processing', error);
+      logger.error('Fatal error during financial data processing', error);
       throw error;
     }
   }
@@ -186,7 +166,7 @@ export class FinancialService {
   private async processStocksPage(
     currentPage: number,
     totalProcessed: number,
-  ): Promise<ProcessPageResult> {
+  ): Promise<PageResult> {
     const stocks = await this.financialData.getStocksBatch(
       currentPage,
       WORKER_CONFIG.pageSize,
@@ -199,7 +179,7 @@ export class FinancialService {
       return { shouldBreak: true, totalProcessed };
     }
 
-    this.logger.log(
+    logger.info(
       `Processing page ${currentPage} with ${stocks.length} stocks (Total processed so far: ${totalProcessed})`,
     );
 
@@ -216,7 +196,7 @@ export class FinancialService {
     const processingTime = Date.now() - processingStart;
     const successRate = pageProcessed / stocks.length;
 
-    this.logger.log(
+    logger.info(
       `Page ${currentPage} completed in ${processingTime}ms. Successfully processed ${pageProcessed}/${stocks.length} stocks.`,
     );
 

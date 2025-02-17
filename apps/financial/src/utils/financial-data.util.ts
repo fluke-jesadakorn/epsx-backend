@@ -1,145 +1,110 @@
-import { ProcessedFinancialData } from '@investing/common/src';
-import { Logger } from '@nestjs/common';
+import { ProcessedFinancialData } from '../types/financial.types';
 
-const logger = new Logger('FinancialDataUtil');
-
-interface RawFinancialData {
-  nodes: Array<{
-    data: any[];
-  }>;
-}
-
-/**
- * Creates an empty financial data object with standard fields
- */
-export const initializeProcessedData = (): ProcessedFinancialData => {
-  return {
-    fiscalQuarter: undefined,
-    fiscalYear: undefined,
-    revenue: undefined,
-    revenueGrowth: undefined,
-    operatingIncome: undefined,
-    interestExpense: undefined,
-    netIncome: undefined,
-    epsBasic: undefined,
-    epsDiluted: undefined,
-    freeCashFlow: undefined,
-    profitMargin: undefined,
-    totalOperatingExpenses: undefined,
-  };
-};
-
-/**
- * Validates the financial data structure and returns the data array if valid
- */
-const validateFinancialData = (
-  financialData: RawFinancialData,
-): any[] | null => {
-  if (!financialData.nodes || financialData.nodes.length < 3) {
-    logger.warn('Invalid dynamic financial data structure: missing nodes');
-    return null;
-  }
-  const data = financialData.nodes[2].data;
-  return data;
-};
-
-/**
- * Extracts the field mapping from the financial data
- */
-const extractFieldMapping = (data: any[]): Record<string, number> | null => {
-  const financialIndex = data[0]?.financialData;
-  if (typeof financialIndex !== 'number') {
-    logger.warn(
-      'Invalid dynamic financial data structure: missing financialData index',
-    );
-    return null;
-  }
-
-  const mapping = data[financialIndex];
-  if (!mapping || typeof mapping !== 'object') {
-    logger.warn(
-      'Invalid dynamic financial data structure: missing mapping object',
-    );
-    return null;
-  }
-
-  return mapping;
-};
-
-// Field transformers for each data type
-const fieldTransformers: Record<
-  keyof ProcessedFinancialData,
-  (value: any) => any
-> = {
-  fiscalYear: (value) => +value,
-  fiscalQuarter: (value) =>
-    typeof value === 'string' ? parseInt(value.replace('Q', '')) : +value,
-  revenue: (value) => value,
-  revenueGrowth: (value) => value,
-  operatingIncome: (value) => value,
-  interestExpense: (value) => value,
-  netIncome: (value) => value,
-  epsBasic: (value) => value,
-  epsDiluted: (value) => value,
-  freeCashFlow: (value) => value,
-  profitMargin: (value) => value,
-  totalOperatingExpenses: (value) => value,
-};
-
-/**
- * Processes dynamic financial data from a nested structure into a flat array of financial records.
- * @param financialData Raw financial data with nested nodes structure
- * @returns Array of processed financial records with mapped keys and values
- */
-export const processDynamicFinancialData = (
-  financialData: RawFinancialData,
-): ProcessedFinancialData[] => {
-  const data = validateFinancialData(financialData);
-  if (!data) return [];
-
-  const fieldMapping = extractFieldMapping(data);
-  if (!fieldMapping) return [];
-
-  const keys = Object.keys(fieldMapping);
-  if (keys.length === 0) {
-    logger.warn(
-      'Invalid dynamic financial data structure: mapping object has no keys',
-    );
+export function processDynamicFinancialData(response: any): ProcessedFinancialData[] {
+  if (!response || !response.nodes) {
     return [];
   }
 
-  // Create data map with type checking
-  const dataMap = keys.reduce<Record<string, any[]>>((acc, key) => {
-    const arr = data[fieldMapping[key]];
-    if (!Array.isArray(arr)) {
-      logger.warn(
-        `Expected array at data[fieldMapping[${key}]] but got undefined or non-array`,
-      );
-      acc[key] = [];
-    } else {
-      acc[key] = arr.map((idx: number) => data[idx]);
+  const processedData: ProcessedFinancialData[] = [];
+
+  // Process each node from the response
+  response.nodes.forEach((node: any) => {
+    if (!node.data || !Array.isArray(node.data)) {
+      return;
     }
-    return acc;
-  }, {});
 
-  const numEntries = dataMap[keys[0]]?.length || 0;
-  if (numEntries === 0) {
-    logger.warn('No entries found in dynamic financial data');
-    return [];
-  }
+    // Process each data item within the node
+    node.data.forEach((item: any) => {
+      const financialData: ProcessedFinancialData = {
+        fiscalQuarter: extractQuarter(item.fiscal_quarter),
+        fiscalYear: extractYear(item.fiscal_year),
+        revenue: normalizeNumber(item.revenue),
+        revenueGrowth: normalizeNumber(item.revenue_growth),
+        operatingIncome: normalizeNumber(item.operating_income),
+        interestExpense: normalizeNumber(item.interest_expense),
+        netIncome: normalizeNumber(item.net_income),
+        epsBasic: normalizeNumber(item.eps_basic),
+        epsDiluted: normalizeNumber(item.eps_diluted),
+        freeCashFlow: normalizeNumber(item.free_cash_flow),
+        profitMargin: normalizeNumber(item.profit_margin),
+        totalOperatingExpenses: normalizeNumber(item.total_operating_expenses),
+      };
 
-  return Array.from({ length: numEntries }, (_, i) => {
-    const entry = initializeProcessedData();
-
-    // Apply transformers to map and convert the data
-    (
-      Object.keys(fieldTransformers) as Array<keyof ProcessedFinancialData>
-    ).forEach((key) => {
-      if (dataMap[key as string]?.[i] !== undefined) {
-        entry[key] = fieldTransformers[key](dataMap[key as string][i]);
+      // Only add valid entries
+      if (isValidFinancialData(financialData)) {
+        processedData.push(financialData);
       }
     });
-
-    return entry;
   });
-};
+
+  // Sort by fiscal year and quarter in descending order
+  return processedData.sort((a, b) => {
+    if (a.fiscalYear !== b.fiscalYear) {
+      return (b.fiscalYear || 0) - (a.fiscalYear || 0);
+    }
+    return (b.fiscalQuarter || 0) - (a.fiscalQuarter || 0);
+  });
+}
+
+function extractQuarter(quarter: string | number | null): number | undefined {
+  if (typeof quarter === 'number') {
+    return quarter >= 1 && quarter <= 4 ? quarter : undefined;
+  }
+  if (typeof quarter === 'string') {
+    const match = quarter.match(/Q(\d)/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      return num >= 1 && num <= 4 ? num : undefined;
+    }
+  }
+  return undefined;
+}
+
+function extractYear(year: string | number | null): number | undefined {
+  if (typeof year === 'number') {
+    return year > 1900 && year < 2100 ? year : undefined;
+  }
+  if (typeof year === 'string') {
+    const num = parseInt(year, 10);
+    return num > 1900 && num < 2100 ? num : undefined;
+  }
+  return undefined;
+}
+
+function normalizeNumber(value: any): number | undefined {
+  if (typeof value === 'number' && !isNaN(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const num = parseFloat(value);
+    return !isNaN(num) ? num : undefined;
+  }
+  return undefined;
+}
+
+function isValidFinancialData(data: ProcessedFinancialData): boolean {
+  // Must have at least fiscal quarter and year
+  if (!data.fiscalQuarter || !data.fiscalYear) {
+    return false;
+  }
+
+  // Must have at least one financial metric
+  return [
+    data.revenue,
+    data.operatingIncome,
+    data.netIncome,
+    data.epsBasic,
+    data.epsDiluted,
+  ].some(metric => metric !== undefined);
+}
+
+// TODO: Implement data validation for specific metrics
+// TODO: Add support for different time period comparisons
+// TODO: Implement data normalization across different currencies
+// TODO: Add support for different accounting standards
+// TODO: Implement outlier detection for financial metrics
+// TODO: Add data quality scoring
+// TODO: Implement trend analysis functions
+// TODO: Add support for sector-specific metrics
+// TODO: Implement ratio calculations
+// TODO: Add historical comparison functions

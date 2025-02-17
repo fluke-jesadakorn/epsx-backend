@@ -1,49 +1,54 @@
 import { Injectable } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Financial } from '../schemas/financial.schema';
-
-export interface FetchState {
-  currentPage: number;
-  totalProcessed: number;
-  lastProcessedStock?: string | null;
-  lastUpdated: string;
-}
+import { join } from 'path';
+import { logger } from '../utils/logger';
+import { promises as fs } from 'fs';
+import { existsSync } from 'fs';
+import { FetchState } from '../types/financial.types';
 
 @Injectable()
 export class FetchStateService {
-  private readonly stateKey = 'financial_fetch_state';
-  private state: FetchState = {
-    currentPage: 1,
-    totalProcessed: 0,
-    lastProcessedStock: null,
-    lastUpdated: new Date().toISOString(),
-  };
+  private readonly statePath: string;
 
-  constructor(
-    @InjectModel(Financial.name)
-    private readonly financialModel: Model<Financial>,
-  ) {}
+  constructor() {
+    this.statePath = join(__dirname, '../fetch-state.json');
+  }
 
   async loadState(): Promise<FetchState> {
     try {
-      return this.state;
+      if (existsSync(this.statePath)) {
+        const state = JSON.parse(await fs.readFile(this.statePath, 'utf8'));
+        return state;
+      }
     } catch (error) {
-      // If no state exists, return default state
-      return this.state;
+      logger.warn('Could not load fetch state, starting fresh', error);
     }
-  }
 
-  async saveState(state: FetchState): Promise<void> {
-    this.state = state;
-  }
-
-  async clearState(): Promise<void> {
-    this.state = {
+    return {
       currentPage: 1,
       totalProcessed: 0,
       lastProcessedStock: null,
-      lastUpdated: new Date().toISOString(),
-    };
+      lastUpdated: new Date().toISOString()
+    } as FetchState;
   }
+
+  async saveState(state: FetchState): Promise<void> {
+    try {
+      await fs.writeFile(this.statePath, JSON.stringify(state, null, 2));
+      logger.info(`Saved fetch state: Page ${state.currentPage}, Processed ${state.totalProcessed} stocks`);
+    } catch (error) {
+      logger.error('Failed to save fetch state', error);
+    }
+  }
+
+  async clearState(): Promise<void> {
+    try {
+      if (existsSync(this.statePath)) {
+        await fs.unlink(this.statePath);
+        logger.info('Cleared fetch state after successful completion');
+      }
+    } catch (error) {
+      logger.error('Failed to clear fetch state', error);
+    }
+  }
+  // TODO: Implement a mechanism to handle corrupted state files
 }

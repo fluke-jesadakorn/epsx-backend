@@ -5,11 +5,14 @@ import {
   AIResponse,
   ChatQueryParams,
   ChatResponse,
-} from '@investing/common';
+  ProviderType,
+  AIMessage,
+  AIRequestOptions
+} from '../types/interfaces';
 import { ChatOpenAI } from '@langchain/openai';
 
 export class OpenRouterProvider implements AIProvider {
-  private baseURL: string = 'https://openrouter.ai/api/v1';
+  private baseUrl: string = 'https://openrouter.ai/api/v1';
   private defaultModel: string = 'deepseek/deepseek-r1:free';
 
   validateConfig(config: AIProviderConfig): boolean {
@@ -26,7 +29,7 @@ export class OpenRouterProvider implements AIProvider {
       maxTokens: 1000,
       openAIApiKey: config.apiKey,
       configuration: {
-        baseURL: process.env.OPENROUTER_BASE_URL || this.baseURL,
+        baseURL: process.env.OPENROUTER_BASE_URL || this.baseUrl,
         defaultHeaders: {
           'HTTP-Referer': process.env.SITE_URL || 'http://localhost:3000',
           'X-Title': process.env.SITE_NAME || 'Local Development',
@@ -35,16 +38,46 @@ export class OpenRouterProvider implements AIProvider {
     });
   }
 
+  async generateResponse(messages: AIMessage[], options?: AIRequestOptions): Promise<AIMessage> {
+    const client = this.createClient({
+      apiKey: process.env.OPENROUTER_API_KEY,
+      baseUrl: process.env.OPENROUTER_BASE_URL,
+      model: this.defaultModel,
+      type: ProviderType.OPENROUTER
+    });
+    try {
+      const formattedMessages = messages.map(msg => ({
+        type: msg.role === 'assistant' ? 'assistant' : 'user',
+        role: msg.role,
+        content: msg.content
+      }));
+      const result = await client.invoke(formattedMessages);
+      const content = typeof result.content === 'string' ? result.content : JSON.stringify(result.content);
+      return {
+        role: 'assistant',
+        content
+      };
+    } catch (error) {
+      throw new Error(`OpenRouter generation failed: ${error.message}`);
+    }
+  }
+
   async query(params: AIQueryParams): Promise<AIResponse> {
     const client = this.createClient({
       apiKey: process.env.OPENROUTER_API_KEY,
-      baseURL: process.env.OPENROUTER_BASE_URL,
+      baseUrl: process.env.OPENROUTER_BASE_URL,
       model: params.model,
+      type: ProviderType.OPENROUTER
     });
     const startTime = Date.now();
 
     try {
-      const result = await client.invoke(params.prompt);
+      const formattedPrompt = [{
+        type: 'user',
+        role: 'user',
+        content: params.prompt
+      }];
+      const result = await client.invoke(formattedPrompt);
       const content = Array.isArray(result.content)
         ? result.content
             .map((c) => (typeof c === 'string' ? c : JSON.stringify(c)))
@@ -71,8 +104,9 @@ export class OpenRouterProvider implements AIProvider {
   async chat(params: ChatQueryParams): Promise<ChatResponse> {
     const client = this.createClient({
       apiKey: process.env.OPENROUTER_API_KEY,
-      baseURL: process.env.OPENROUTER_BASE_URL,
+      baseUrl: process.env.OPENROUTER_BASE_URL,
       model: params.model,
+      type: ProviderType.OPENROUTER
     });
     const startTime = Date.now();
 
@@ -82,7 +116,12 @@ export class OpenRouterProvider implements AIProvider {
         content: msg.content,
       }));
 
-      const result = await client.invoke(messages);
+      const formattedMessages = messages.map(msg => ({
+        type: msg.role === 'assistant' ? 'assistant' : 'user',
+        role: msg.role,
+        content: msg.content
+      }));
+      const result = await client.invoke(formattedMessages);
       const content = Array.isArray(result.content)
         ? result.content
             .map((c) => (typeof c === 'string' ? c : JSON.stringify(c)))

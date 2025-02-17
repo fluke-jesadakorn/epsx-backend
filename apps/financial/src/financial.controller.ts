@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
-import { PaginationParams } from '@investing/common';
 import { FinancialService } from './financial.service';
+import { PaginationParams } from './types';
 
 @Controller()
 export class FinancialController {

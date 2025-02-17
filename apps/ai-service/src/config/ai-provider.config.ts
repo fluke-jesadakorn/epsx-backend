@@ -2,14 +2,14 @@ import { AIProviderConfig } from '../schema/ai-provider.schema';
 
 export const AI_PROVIDER_CONFIG: Record<string, Partial<AIProviderConfig>> = {
   ollama: {
-    baseURL: 'http://localhost:11434/v1',
+    baseUrl: 'http://localhost:11434/v1',
     apiKey: 'ollama',
     model: 'mistral-small:latest',
     timeout: 30000,
     maxRetries: 2,
   },
   openrouter: {
-    baseURL: 'https://openrouter.ai/api/v1',
+    baseUrl: 'https://openrouter.ai/api/v1',
     model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-r1:free',
     timeout: 30000,
     maxRetries: 3,

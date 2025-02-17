@@ -31,48 +31,49 @@ export class StockScreenerResponseDto {
 }
 
 export class ScrapingSummaryResponse {
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Total number of exchanges that were processed',
     example: 5,
-    minimum: 0 
+    minimum: 0,
   })
   totalExchanges: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Number of exchanges successfully processed without errors',
     example: 4,
-    minimum: 0 
+    minimum: 0,
   })
   processedExchanges: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Total number of stocks found across all exchanges',
     example: 1000,
-    minimum: 0 
+    minimum: 0,
   })
   totalStocks: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Number of new unique stocks added to the database',
     example: 50,
-    minimum: 0 
+    minimum: 0,
   })
   newStocks: number;
 
-  @ApiProperty({ 
-    description: 'Number of exchanges that encountered errors during processing',
+  @ApiProperty({
+    description:
+      'Number of exchanges that encountered errors during processing',
     example: 1,
-    minimum: 0 
+    minimum: 0,
   })
   failedExchanges: number;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Detailed error messages for failed operations',
     example: [
       'Failed to fetch data for NYSE: Rate limit exceeded',
-      'Invalid data format received for NASDAQ'
+      'Invalid data format received for NASDAQ',
     ],
-    isArray: true
+    isArray: true,
   })
   errors: string[];
 }
@@ -82,7 +83,7 @@ export class StockScreenerFilters {
     description: 'Industry sectors to include',
     example: ['Technology', 'Healthcare', 'Finance'],
     isArray: true,
-    required: false
+    required: false,
   })
   sectors?: string[];
 
@@ -90,7 +91,7 @@ export class StockScreenerFilters {
     description: 'Geographic regions to filter by',
     example: ['North America', 'APAC', 'Europe'],
     isArray: true,
-    required: false
+    required: false,
   })
   regions?: string[];
 
@@ -98,7 +99,7 @@ export class StockScreenerFilters {
     description: 'Minimum market capitalization in millions USD',
     example: 1000,
     minimum: 0,
-    required: false
+    required: false,
   })
   minMarketCap?: number;
 
@@ -106,7 +107,7 @@ export class StockScreenerFilters {
     description: 'Minimum daily trading volume',
     example: 100000,
     minimum: 0,
-    required: false
+    required: false,
   })
   minVolume?: number;
 }
@@ -115,19 +116,19 @@ export class StockScreenerFilters {
 export class ScrapingSuccessResponse {
   @ApiProperty({
     description: 'Success status of the operation',
-    example: true
+    example: true,
   })
   success: boolean;
 
   @ApiProperty({
     description: 'Time taken to complete the operation in milliseconds',
-    example: 5432
+    example: 5432,
   })
   duration: number;
 
   @ApiProperty({
     description: 'Summary of the scraping operation',
-    type: ScrapingSummaryResponse
+    type: ScrapingSummaryResponse,
   })
   summary: ScrapingSummaryResponse;
 }
