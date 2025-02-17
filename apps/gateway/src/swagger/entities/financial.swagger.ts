@@ -1,157 +1,70 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { PaginatedResponse } from './common.swagger';
 
-export class FinancialDataDto {
-  @ApiProperty({
-    type: Number,
-    example: 1000000000,
-  })
-  revenue?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 15.5,
-  })
-  revenue_growth?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 300000000,
-  })
-  operating_income?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 250000000,
-  })
-  net_income?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 12.3,
-  })
-  net_income_growth?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 2.5,
-  })
-  eps_basic?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 2.45,
-  })
-  eps_diluted?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 18.7,
-  })
-  eps_growth?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 400000000,
-  })
-  free_cash_flow?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 0.75,
-  })
-  dividend_per_share?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 25.5,
-  })
-  profit_margin?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 450000000,
-  })
-  ebitda?: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 32.8,
-  })
-  ebitda_margin?: number;
-}
-
-export class FinancialReportDto extends FinancialDataDto {
-  @ApiProperty({
-    type: String,
-    example: '2024-01-31',
-  })
-  report_date: string;
-
-  @ApiProperty({
-    type: Number,
-    example: 4,
-  })
-  fiscal_quarter: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 2023,
-  })
-  fiscal_year: number;
-
-  @ApiProperty({
-    type: String,
-    example: '507f1f77bcf86cd799439011',
-  })
-  stock: string;
-}
-
-export class EPSGrowthRankingResponse extends PaginatedResponse<any> {}
-
-export class FetchFinancialsResponse {
-  @ApiProperty({
-    type: Number,
-    example: 500,
-  })
-  companiesProcessed: number;
-
-  @ApiProperty({
-    type: Number,
-    example: 2000,
-  })
-  reportsGenerated: number;
-
-  @ApiProperty({
-    type: String,
-    example: '2024-02-15T04:11:16.789Z',
-  })
-  lastProcessedAt: string;
-
-  @ApiProperty({
-    type: Object,
-    example: {
-      success: 495,
-      failed: 5,
-      skipped: 0,
-    },
-  })
-  statistics: {
-    success: number;
-    failed: number;
-    skipped: number;
-  };
-}
-
-// Future Features Documentation
 /**
- * TODO: Add documentation for future features:
- * - Historical financial data comparison types
- * - Financial ratios and metrics types // Consider adding documentation for financial ratios and metrics types
- * - Financial statements types (Balance Sheet, Cash Flow)
- * - Industry comparison response types
- * - Financial forecasts types
- * - Custom financial metric types
- * - Financial alert/notification types
- * - Data validation response types
+ * Financial Service Swagger Entities
+ * This file is the source of truth for Financial service DTOs used in the API Gateway.
+ * These DTOs define the contract between the API and clients.
  */
+
+export class EPSStockInfoDto {
+  @ApiProperty({ description: 'Stock symbol' })
+  symbol: string;
+
+  @ApiProperty({ description: 'Company name', nullable: true })
+  companyName: string | null;
+
+  @ApiProperty({ description: 'Earnings per share value' })
+  eps: number;
+
+  @ApiProperty({ description: 'EPS growth percentage' })
+  epsGrowthPercent: number;
+
+  @ApiProperty({ description: 'Report date' })
+  reportDate: string;
+}
+
+export class EPSGrowthResultDto {
+  @ApiProperty({ type: EPSStockInfoDto })
+  current: EPSStockInfoDto;
+
+  @ApiProperty({ type: EPSStockInfoDto })
+  previous: EPSStockInfoDto;
+}
+
+export class EPSGrowthMetadataDto {
+  @ApiProperty({ description: 'Total number of records' })
+  total: number;
+
+  @ApiProperty({ description: 'Number of items per page' })
+  limit: number;
+
+  @ApiProperty({ description: 'Number of items to skip' })
+  skip: number;
+}
+
+export class EPSGrowthResponseDto {
+  @ApiProperty({ type: [EPSGrowthResultDto] })
+  data: EPSGrowthResultDto[];
+
+  @ApiProperty({ type: EPSGrowthMetadataDto })
+  metadata: EPSGrowthMetadataDto;
+}
+
+export class FinancialFetchResponseDto {
+  @ApiProperty({ description: 'Status message' })
+  message: string;
+
+  @ApiProperty({ description: 'Operation success status' })
+  success: boolean;
+}
+
+export class HealthCheckResponseDto {
+  @ApiProperty({ description: 'Service status', example: 'ok' })
+  status: string;
+
+  @ApiProperty({ description: 'Service name', example: 'financial-service' })
+  service: string;
+
+  @ApiProperty({ description: 'Timestamp of health check', example: '2025-02-17T14:52:44.000Z' })
+  timestamp: string;
+}

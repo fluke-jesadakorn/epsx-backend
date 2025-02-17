@@ -81,11 +81,6 @@ async function bootstrap() {
       .setTitle('Gateway API')
       .setDescription('Gateway service API documentation')
       .setVersion('1.0')
-      .addTag('Stocks', 'Stock market data and operations')
-      .addTag('Stock Scraping', 'Stock data scraping operations')
-      .addTag('Exchanges', 'Exchange market operations')
-      .addTag('Financial', 'Financial data operations')
-      .addTag('AI', 'AI-powered analysis')
       .addTag('Health', 'Service health checks')
       .build();
 

@@ -17,7 +17,7 @@
     "build:health": "nest build health",
     "build:stock": "nest build stock",
     "start:gateway": "cd apps/gateway && bun run start:dev",
-    "start:gateway:prod": "cd apps/gateway && bun run start",
+    "start:gateway:prod": "cd apps/gateway && tsc && bun dist/src/main.js",
     "start:ai": "cd apps/ai-service && bun run start:dev",
     "start:ai:prod": "cd apps/ai-service && bun run start",
     "start:exchange": "cd apps/exchange && bun run start:dev",

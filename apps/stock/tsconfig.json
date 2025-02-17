@@ -2,15 +2,10 @@
   "extends": "../../tsconfig.json",
   "composite": true,
   "compilerOptions": {
-    "outDir": "../../dist/apps/stock",
+    "outDir": "./dist",
     "composite": true,
     "rootDir": "src",
-    "baseUrl": "./src",
-    "paths": {
-      "@epsx/common": ["../../libs/common/src"],
-      "@epsx/common/*": ["../../libs/common/src/*"],
-      "@apps/*": ["../../apps/*"]
-    }
+    "baseUrl": "./src"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"],

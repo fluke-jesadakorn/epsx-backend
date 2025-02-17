@@ -3,7 +3,7 @@
   "compilerOptions": {
     "composite": true,
     "declaration": true,
-    "outDir": "../../dist/apps/financial",
+    "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": "./",
     "paths": {

@@ -5,8 +5,7 @@
   "scripts": {
     "build": "nest build",
     "start:dev": "nest start --watch",
-    "start": "node dist/main.js",
-    "start:prod": "node dist/main.js"
+    "start": "bun dist/main.js"
   },
   "dependencies": {
     "@epsx/common": "file:../../libs/common",

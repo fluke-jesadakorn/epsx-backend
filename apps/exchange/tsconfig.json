@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../dist/apps/exchange",
+    "outDir": "./dist",
     "composite": true,
     "rootDir": "src",
     "baseUrl": "./src",

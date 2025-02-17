@@ -1,22 +1,19 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "module": "commonjs",
     "declaration": true,
-    "outDir": "../../dist/apps/gateway",
-    "composite": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "target": "es2017",
+    "sourceMap": true,
+    "outDir": "./dist",
     "baseUrl": "./",
-    "module": "CommonJS",
-    "rootDir": "../../",
-    "moduleResolution": "Node",
-    "paths": {
-      "@libs/common": ["../../libs/common"],
-      "@libs/common/*": ["../../libs/common/*"]
-    }
+    "incremental": true,
+    "skipLibCheck": true
   },
-  "include": ["src/**/*", "../../libs/common/src/**/*"],
-  "exclude": ["node_modules", "dist"],
-  "incremental": false,
-  "declaration": false,
-  "tsBuildInfoFile": false,
-  "sourceMap": false
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

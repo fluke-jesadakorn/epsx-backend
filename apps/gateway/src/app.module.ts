@@ -3,11 +3,11 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TerminusModule } from '@nestjs/terminus';
-import { StockController } from './controllers/stock.controller';
-import { ExchangeController } from './controllers/exchange.controller';
 import { AiController } from './controllers/ai.controller';
+import { ExchangeController } from './controllers/exchange.controller';
 import { FinancialController } from './controllers/financial.controller';
 import { HealthController } from './controllers/health.controller';
+import { StockController } from './controllers/stock.controller';
 
 @Module({
   imports: [
