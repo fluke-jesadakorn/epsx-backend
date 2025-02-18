@@ -2,12 +2,15 @@
   "compilerOptions": {
     "module": "commonjs",
     "removeComments": true,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
     "target": "es2017",
     "sourceMap": false,
-    "baseUrl": "./",
+    "baseUrl": ".",
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": false,
@@ -17,11 +20,27 @@
     "noFallthroughCasesInSwitch": false,
     "composite": true,
     "paths": {
+      "@app/common": ["libs/common/src"],
+      "@app/common/*": ["libs/common/src/*"],
+      "@exchange/*": ["apps/exchange/src/*"],
       "@financial/*": ["apps/financial/src/*"],
-      "@database/*": ["apps/database/*"],
-      "@utils/*": ["apps/utils/*"]
+      "@stock/*": ["apps/stock/src/*"]
     }
   },
-  "references": [{ "path": "./apps/financial" }],
+  "tsBuildInfoFile": "./dist/root.tsbuildinfo",
+  "references": [
+    {
+      "path": "./apps/financial"
+    },
+    {
+      "path": "./apps/stock"
+    },
+    {
+      "path": "./apps/exchange"
+    },
+    {
+      "path": "./libs/common"
+    }
+  ],
   "exclude": ["node_modules", "dist"]
 }

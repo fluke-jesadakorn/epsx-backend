@@ -63,28 +63,33 @@ export class AiController {
     } catch (error) {
       // Enhance error details for better debugging
       const errorDetails = {
-        type: error.name,
-        message: error.message,
-        code: error.code || 'UNKNOWN',
+        type: error?.name || 'UnknownError',
+        message: error?.message || 'An unexpected error occurred',
+        code: error?.code || 'UNKNOWN',
         timestamp: new Date().toISOString(),
+        originalError: error, // Keep original error for debugging
       };
 
       // Log the error for monitoring
       console.error('AI Query Error:', errorDetails);
 
       // Transform common errors into user-friendly messages
-      if (error.code === 'ECONNREFUSED') {
+      if (errorDetails.code === 'ECONNREFUSED') {
         throw new Error(
           'AI service is temporarily unavailable. Please try again later.',
         );
       }
 
-      if (error.name === 'TimeoutError') {
+      if (errorDetails.type === 'TimeoutError') {
         throw new Error('Request timed out. Please try again.');
       }
 
-      // Re-throw other errors with additional context
-      throw new Error(`Failed to process query: ${error.message}`);
+      // Re-throw with meaningful message
+      throw new Error(
+        errorDetails.message !== 'undefined' 
+          ? `Failed to process query: ${errorDetails.message}`
+          : 'Failed to process query. Please try again later.'
+      );
     }
   }
 
@@ -112,28 +117,33 @@ export class AiController {
     } catch (error) {
       // Enhance error details for better debugging
       const errorDetails = {
-        type: error.name,
-        message: error.message,
-        code: error.code || 'UNKNOWN',
+        type: error?.name || 'UnknownError',
+        message: error?.message || 'An unexpected error occurred',
+        code: error?.code || 'UNKNOWN',
         timestamp: new Date().toISOString(),
+        originalError: error, // Keep original error for debugging
       };
 
       // Log the error for monitoring
       console.error('AI Chat Error:', errorDetails);
 
       // Transform common errors into user-friendly messages
-      if (error.code === 'ECONNREFUSED') {
+      if (errorDetails.code === 'ECONNREFUSED') {
         throw new Error(
           'AI chat service is temporarily unavailable. Please try again later.',
         );
       }
 
-      if (error.name === 'TimeoutError') {
+      if (errorDetails.type === 'TimeoutError') {
         throw new Error('Chat request timed out. Please try again.');
       }
 
-      // Re-throw other errors with additional context
-      throw new Error(`Failed to process chat: ${error.message}`);
+      // Re-throw with meaningful message
+      throw new Error(
+        errorDetails.message !== 'undefined' 
+          ? `Failed to process chat: ${errorDetails.message}`
+          : 'Failed to process chat. Please try again later.'
+      );
     }
   }
 

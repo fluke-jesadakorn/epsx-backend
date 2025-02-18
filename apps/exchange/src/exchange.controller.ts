@@ -1,14 +1,14 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern } from '@nestjs/microservices';
 import { ExchangeService } from './exchange.service';
-import { Exchange } from './schemas/exchange.schema';
+import { ExchangeDocument } from '@app/common/schemas/exchange.schema';
 
 @Controller()
 export class ExchangeController {
   constructor(private readonly exchangeService: ExchangeService) {}
 
   @MessagePattern({ cmd: 'createExchange' })
-  async create(exchangeData: Partial<Exchange>) {
+  async create(exchangeData: Partial<ExchangeDocument>) {
     return this.exchangeService.create(exchangeData);
   }
 
@@ -24,7 +24,7 @@ export class ExchangeController {
   }
 
   @MessagePattern({ cmd: 'updateExchange' })
-  async update(data: { marketCode: string; updateData: Partial<Exchange> }) {
+  async update(data: { marketCode: string; updateData: Partial<ExchangeDocument> }) {
     return this.exchangeService.update(data.marketCode, data.updateData);
   }
 

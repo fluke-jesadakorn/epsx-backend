@@ -1,7 +1,7 @@
 import {
   SqlQueryContext,
   SqlQueryValidation,
-} from '../schema/sql-query.schema';
+} from '@app/common/schemas/sql-query.schema';
 
 export const QUERY_CONTEXT: SqlQueryContext = {
   tables: {

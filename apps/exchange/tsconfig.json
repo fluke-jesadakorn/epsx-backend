@@ -1,14 +1,20 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "declaration": true,
     "composite": true,
-    "outDir": "./dist",
-    "baseUrl": "./",
+    "baseUrl": "../../",
+    "outDir": "../../dist/apps/exchange",
+    "paths": {
+      "@app/common": ["libs/common/src"],
+      "@app/common/*": ["libs/common/src/*"]
+    }
   },
+  "references": [
+    {
+      "path": "../../libs/common"
+    }
+  ],
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"],
-  "incremental": false,
-  "declaration": false,
-  "tsBuildInfoFile": false,
-  "sourceMap": false
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }

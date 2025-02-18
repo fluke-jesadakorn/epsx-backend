@@ -1,4 +1,5 @@
-import { AIProviderConfig } from '../schema/ai-provider.schema';
+import { AIProviderConfig } from '@app/common/schemas/ai-provider.schema';
+import { ConfigService } from '@nestjs/config';
 
 export const AI_PROVIDER_CONFIG: Record<string, Partial<AIProviderConfig>> = {
   ollama: {
@@ -10,13 +11,10 @@ export const AI_PROVIDER_CONFIG: Record<string, Partial<AIProviderConfig>> = {
   },
   openrouter: {
     baseUrl: 'https://openrouter.ai/api/v1',
+    apiKey: process.env.OPENROUTER_API_KEY,
     model: process.env.OPENROUTER_MODEL || 'deepseek/deepseek-r1:free',
     timeout: 30000,
     maxRetries: 3,
-    headers: {
-      'HTTP-Referer': process.env.SITE_URL || 'http://localhost:3000',
-      'X-Title': process.env.SITE_NAME || 'Local Development',
-    },
   },
 };
 

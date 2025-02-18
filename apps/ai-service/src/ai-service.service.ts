@@ -10,7 +10,7 @@ import { AiQueryDto } from './dto/ai-query.dto';
 import { ChatQueryDto } from './dto/chat-query.dto';
 import { AiQueryService } from './ai-query.service';
 import { AiQueryResponse } from './types/ai.types';
-import { AIMessage } from './schema/ai-provider.schema';
+import { AIMessage } from '@app/common/schemas/ai-provider.schema';
 import { timeout } from 'rxjs/operators';
 import { from, retry, catchError } from 'rxjs';
 

@@ -38,6 +38,7 @@ async function bootstrap() {
     {
       transport: Transport.TCP,
       options: {
+        host: process.env.STOCK_SERVICE_HOST || 'localhost',
         port: parseInt(process.env.STOCK_SERVICE_PORT || '4200'),
         retryAttempts: 3,
         retryDelay: 1000,
@@ -59,11 +60,12 @@ async function bootstrap() {
 
   await app.listen();
   logger.log(
-    `Stock microservice is listening on port ${process.env.STOCK_SERVICE_PORT || '4200'}`,
+    `Stock microservice is listening on ${process.env.STOCK_SERVICE_HOST || 'localhost'}:${process.env.STOCK_SERVICE_PORT || '4200'}`,
   );
 
   // Log configuration for debugging
   logger.debug('Stock Service Configuration:', {
+    host: process.env.STOCK_SERVICE_HOST || 'localhost',
     port: process.env.STOCK_SERVICE_PORT || '4200',
     nodeEnv: process.env.NODE_ENV || 'development',
     retryAttempts: 3,

@@ -4,8 +4,13 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { StockController } from './stock.controller';
 import { StockService } from './stock.service';
 import { HttpService } from './http.service';
-import { Stock, StockSchema } from './schemas/stock.schema';
-import { Exchange, ExchangeSchema } from './schemas/exchange.schema';
+import {
+  Stock,
+  StockSchema,
+  ExchangeDocument,
+  ExchangeSchema,
+} from '@app/common/schemas';
+import { ExchangeModule } from '@exchange/exchange.module';
 
 @Module({
   imports: [
@@ -23,8 +28,12 @@ import { Exchange, ExchangeSchema } from './schemas/exchange.schema';
     }),
     MongooseModule.forFeature([
       { name: Stock.name, schema: StockSchema },
-      { name: 'Exchange', schema: ExchangeSchema },
+      {
+        name: 'Exchange',
+        schema: ExchangeSchema,
+      },
     ]),
+    ExchangeModule,
   ],
   controllers: [StockController],
   providers: [StockService, HttpService],

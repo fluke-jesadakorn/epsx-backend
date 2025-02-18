@@ -45,7 +45,7 @@ import { StockController } from './controllers/stock.controller';
         useFactory: (configService: ConfigService) => ({
           transport: Transport.TCP,
           options: {
-            host: configService.get('STOCK_SERVICE_HOST', '0.0.0.0'),
+            host: configService.get('STOCK_SERVICE_HOST', 'localhost'),
             port: configService.get('STOCK_SERVICE_PORT', 4200),
           },
         }),
@@ -57,7 +57,7 @@ import { StockController } from './controllers/stock.controller';
         useFactory: (configService: ConfigService) => ({
           transport: Transport.TCP,
           options: {
-            host: configService.get('FINANCIAL_SERVICE_HOST', '0.0.0.0'),
+            host: configService.get('FINANCIAL_SERVICE_HOST', 'localhost'),
             port: configService.get('FINANCIAL_SERVICE_PORT', 4300),
           },
         }),
@@ -69,7 +69,7 @@ import { StockController } from './controllers/stock.controller';
         useFactory: (configService: ConfigService) => ({
           transport: Transport.TCP,
           options: {
-            host: configService.get('AI_SERVICE_HOST', '0.0.0.0'),
+            host: configService.get('AI_SERVICE_HOST', 'localhost'),
             port: configService.get('AI_SERVICE_PORT', 4400),
           },
         }),

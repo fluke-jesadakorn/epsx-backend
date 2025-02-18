@@ -1,13 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { HttpService } from './http.service';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, PipelineStage } from 'mongoose';
-import { Financial, FinancialDocument } from './schemas/financial.schema';
-import { Stock, StockDocument } from './schemas/stock.schema';
-import { UrlIndex, UrlIndexDocument } from './schemas/url-index.schema';
-import { ClientProxy, MessagePattern } from '@nestjs/microservices';
-import { EpsGrowth, EpsGrowthDocument } from './schemas/eps-growth.schema';
+import { FinancialDocument } from '@app/common/schemas/financial.schema';
+import { Stock, StockDocument, StockWithMarketCode } from '@app/common/schemas/stock.schema';
+import { UrlIndex, UrlIndexDocument } from '@app/common/schemas/url-index.schema';
+import { MessagePattern } from '@nestjs/microservices';
 
 // Interface for EPS Growth data response
 export interface EpsGrowthData {
@@ -51,10 +49,6 @@ export interface EPSGrowthResult {
   previous: EPSStockInfo;
 }
 
-interface StockWithMarketCode extends Stock {
-  _id: string;
-  market_code: string;
-}
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -65,7 +59,7 @@ export class FinancialService {
   private readonly logger = new Logger(FinancialService.name);
 
   constructor(
-    @InjectModel(Financial.name)
+    @InjectModel(FinancialDocument.name)
     private financialModel: Model<FinancialDocument>,
     @InjectModel(Stock.name) private stockModel: Model<StockDocument>,
     @InjectModel(UrlIndex.name)
@@ -284,7 +278,7 @@ export class FinancialService {
           }
 
           return {
-            stock_id: stock._id,
+            stock: stock._id,
             report_date: new Date(item.datekey),
             fiscal_quarter: fiscalQuarter,
             fiscal_year: fiscalYear,
@@ -340,7 +334,7 @@ export class FinancialService {
         }
 
         return {
-          stock_id: stock._id,
+          stock: stock._id,
           report_date: new Date(item.periodEnding),
           fiscal_quarter: fiscalQuarter,
           fiscal_year: fiscalYear,
@@ -375,130 +369,70 @@ export class FinancialService {
     try {
       const pipeline: PipelineStage[] = [
         {
-          $match: {
-            eps_diluted: { $ne: null },
-          },
-        } as any,
-        {
-          $sort: { report_date: -1 },
-        } as any,
-        {
-          $group: {
-            _id: '$stock_id',
-            reportDates: { $push: '$$ROOT' }
-          }
-        } as any,
-        {
-          $project: {
-            _id: 1,
-            latest: { $arrayElemAt: ['$reportDates', 0] },
-            previous: { $arrayElemAt: ['$reportDates', 1] }
-          }
-        } as any,
-        {
-          $match: {
-            'previous': { $exists: true }
-          },
-        } as any,
-        {
           $lookup: {
             from: 'stocks',
-            localField: '_id',
+            localField: 'stock',
             foreignField: '_id',
-            as: 'stock',
+            as: 'stock_info',
           },
-        } as any,
-        {
-          $unwind: '$stock',
-        } as any,
-        {
-          $project: {
-            _id: 0,
-            symbol: '$stock.symbol',
-            company_name: '$stock.company_name',
-            market_code: { $ifNull: ['$stock.exchanges.market_code', 'stocks'] },
-            eps: '$latest.eps_diluted',
-            eps_growth: {
-              $cond: [
-                { $ne: ['$previous.eps_diluted', 0] },
-                {
-                  $multiply: [
-                    {
-                      $divide: [
-                        {
-                          $subtract: [
-                            '$latest.eps_diluted',
-                            '$previous.eps_diluted',
-                          ],
-                        },
-                        { $abs: '$previous.eps_diluted' },
-                      ],
-                    },
-                    100,
-                  ],
-                },
-                0,
-              ],
-            },
-            last_report_date: { 
-              $dateToString: { 
-                format: '%Y-%m-%d', 
-                date: '$latest.report_date' 
-              } 
-            },
-          },
-        } as any,
-        {
-          $match: {
-            eps_growth: { $ne: null },
-          },
-        } as any,
-        {
-          $sort: { eps_growth: -1 },
-        } as any,
-        {
-          $group: {
-            _id: null,
-            items: {
-              $push: {
-                symbol: '$symbol',
-                company_name: '$company_name',
-                market_code: '$market_code',
-                eps: '$eps',
-                eps_growth: '$eps_growth',
-                last_report_date: '$last_report_date'
-              }
-            }
-          }
-        } as any,
-        {
-          $unwind: {
-            path: '$items',
-            includeArrayIndex: 'rank_pos'
-          }
-        } as any,
-        {
-          $replaceRoot: {
-            newRoot: {
-              $mergeObjects: [
-                '$items',
-                {
-                  rank: { $add: [{ $add: ['$rank_pos', skip] }, 1] }
-                }
-              ]
-            }
-          }
-        } as any,
-        {
-          $facet: {
-            data: [{ $skip: skip }, { $limit: limit }],
-            total: [{ $count: 'count' }],
-          },
-        } as any,
+        },
+        // {
+        //   $unwind: '$stock_info',
+        // },
+        // {
+        //   $lookup: {
+        //     from: 'exchanges',
+        //     localField: 'stock_info.exchange',
+        //     foreignField: '_id',
+        //     as: 'exchange_info',
+        //   },
+        // },
+        // {
+        //   $unwind: '$exchange_info',
+        // },
+        // {
+        //   $setWindowFields: {
+        //     partitionBy: '$stock',
+        //     sortBy: { fiscal_year: 1, fiscal_quarter: 1 },
+        //     output: {
+        //       prev_eps: {
+        //         $shift: { output: '$eps_basic', by: -1, default: null },
+        //       },
+        //     },
+        //   },
+        // },
+        // {
+        //   $addFields: {
+        //     eps_basic_growth: {
+        //       $cond: [
+        //         {
+        //           $and: [
+        //             { $ne: ['$prev_eps', null] },
+        //             { $ne: ['$prev_eps', 0] },
+        //           ],
+        //         },
+        //         {
+        //           $multiply: [
+        //             {
+        //               $divide: [
+        //                 { $subtract: ['$eps_basic', '$prev_eps'] },
+        //                 '$prev_eps',
+        //               ],
+        //             },
+        //             100,
+        //           ],
+        //         },
+        //         null,
+        //       ],
+        //     },
+        //   },
+        // },
+        // { $match: { eps_basic_growth: { $ne: null } } },
       ];
 
-      const result = await this.financialModel.aggregate(pipeline);
-      const data = result[0].data;
+      const result = await this.financialModel.aggregate(pipeline).exec();
+      console.log(result);
+      const data = result[0];
       const total = result[0].total[0]?.count || 0;
 
       // Calculate page related metadata
@@ -547,12 +481,12 @@ export class FinancialService {
 
       // Find existing records to avoid duplicates
       const existingRecords = await this.financialModel.find({
-        stock_id: stock._id,
+        stock: stock._id,
       });
       const existingKeys = new Set(
         existingRecords.map(
           (rec) =>
-            `${rec.stock_id}|${new Date(rec.report_date).toISOString()}|${rec.fiscal_quarter}|${rec.fiscal_year}`,
+            `${rec.stock}|${new Date(rec.report_date).toISOString()}|${rec.fiscal_quarter}|${rec.fiscal_year}`,
         ),
       );
 
@@ -577,15 +511,15 @@ export class FinancialService {
           return false;
         }
 
-        // Ensure stock_id is present
-        if (!fin.stock_id) {
+        // Ensure stock is present
+        if (!fin.stock) {
           console.warn(
-            `Skipping record with missing stock_id for ${stock.market_code}/${stock.symbol}`,
+            `Skipping record with missing stock reference for ${stock.market_code}/${stock.symbol}`,
           );
           return false;
         }
 
-        const key = `${fin.stock_id}|${new Date(fin.report_date).toISOString()}|${fin.fiscal_quarter}|${fin.fiscal_year}`;
+        const key = `${fin.stock}|${new Date(fin.report_date).toISOString()}|${fin.fiscal_quarter}|${fin.fiscal_year}`;
         if (existingKeys.has(key)) {
           console.debug(
             `[Duplicate Prevention] Skipping record for ${stock.market_code}/${stock.symbol}: Q${fin.fiscal_quarter} ${fin.fiscal_year} - Record already exists in database (compound unique index: stock_id + fiscal_quarter + fiscal_year)`,
@@ -641,7 +575,7 @@ export class FinancialService {
           (stock) => ({
             ...stock.toObject(),
             _id: stock._id.toString(),
-            market_code: stock.exchanges?.market_code || 'stocks',
+            market_code: 'stocks', // Default to 'stocks' since we don't have exchange info yet
           }),
         );
 

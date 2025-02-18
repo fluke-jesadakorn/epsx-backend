@@ -5,7 +5,6 @@ import {
   QueryTemplate,
 } from '../types/ai.types';
 
-// Note: Stock and Financial table schemas moved to common library
 export type {
   SqlQueryResult,
   SqlQueryContext,

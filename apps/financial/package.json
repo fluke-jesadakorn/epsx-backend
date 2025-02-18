@@ -4,8 +4,8 @@
   "description": "Financial microservice",
   "scripts": {
     "build": "nest build",
-    "start:dev": "nest start --watch",
-    "start": "bun ./dist/main.js"
+    "start": "bun ./dist/main.js",
+    "start:dev": "nest start --watch"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.8",

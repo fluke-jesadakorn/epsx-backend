@@ -27,14 +27,16 @@ import { AiQueryService } from './ai-query.service';
   providers: [
     {
       provide: 'AI_PROVIDER',
-      useFactory: () => {
-        const providerType = process.env.AI_PROVIDER_TYPE || 'ollama';
+      useFactory: (configService: ConfigService) => {
+        const providerType =
+          configService.get<string>('AI_PROVIDER_TYPE') || 'ollama';
         return ProviderFactory.getProvider(providerType);
       },
+      inject: [ConfigService],
     },
-    AiServiceService,
     AiQueryService,
+    AiServiceService,
   ],
-  exports: ['AI_PROVIDER', AiServiceService, AiQueryService],
+  exports: ['AI_PROVIDER', AiQueryService, AiQueryService],
 })
 export class AiModule {}

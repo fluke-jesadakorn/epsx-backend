@@ -5,8 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Document, Model } from 'mongoose';
-import { Stock, StockDocument } from './schemas/stock.schema';
+import { Model } from 'mongoose';
+import { Stock, StockDocument, ExchangeDocument } from '@app/common/schemas';
 import { HttpService } from './http.service';
 import {
   StockScreenerResponse,
@@ -14,7 +14,6 @@ import {
   Paginate,
   formatPaginationResponse,
 } from './interfaces/common.interfaces';
-import { Exchange as ExchangeDocument } from './interfaces/exchange.interface';
 
 const STOCK_CONFIG = {
   stockBatchSize: 100,
@@ -300,12 +299,14 @@ export class StockService {
           throw new NotFoundException('No exchanges found with provided IDs');
         }
       } else {
-    existingExchanges = await this.exchangeModel.find().exec();
-    if (!existingExchanges.length) {
-      throw new NotFoundException('No exchanges found in database. Please ensure exchanges are populated before scraping stocks.');
-    }
-  }
-} catch (error) {
+        existingExchanges = await this.exchangeModel.find().exec();
+        if (!existingExchanges.length) {
+          throw new NotFoundException(
+            'No exchanges found in database. Please ensure exchanges are populated before scraping stocks.',
+          );
+        }
+      }
+    } catch (error) {
       this.logger.error(`Failed to fetch exchanges: ${error.message}`);
       throw new BadRequestException('Failed to fetch exchanges');
     }

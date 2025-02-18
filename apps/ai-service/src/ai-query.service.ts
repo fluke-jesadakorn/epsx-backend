@@ -1,16 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AIMessage, AIRequestOptions } from './schema/ai-provider.schema';
-import { SqlQueryResult } from './schema/sql-query.schema';
+import { ConfigService } from '@nestjs/config';
+import {
+  AIMessage,
+  AIRequestOptions,
+} from '@app/common/schemas/ai-provider.schema';
+import { SqlQueryResult } from '@app/common/schemas/sql-query.schema';
 import { ProviderFactory } from './providers/provider.factory';
-import {
-  AI_PROVIDER_CONFIG,
-  DEFAULT_AI_OPTIONS,
-} from './config/ai-provider.config';
-import {
-  QUERY_CONTEXT,
-  QUERY_VALIDATION,
-  SYSTEM_PROMPT,
-} from './config/query-rules.config';
+import { AI_PROVIDER_CONFIG } from './config/ai-provider.config';
+import { QUERY_VALIDATION, SYSTEM_PROMPT } from './config/query-rules.config';
 import {
   BaseMessage,
   HumanMessage,
@@ -27,19 +24,24 @@ export class AiQueryService {
   private readonly provider;
   private readonly config;
 
-  constructor() {
-    const useLocalOllama = process.env.USE_LOCAL_OLLAMA === 'true';
-    // TODO: Make the provider configurable through a config file or environment variables
+  constructor(private readonly configService: ConfigService) {
+    const useLocalOllama =
+      configService.get<string>('USE_LOCAL_OLLAMA') === 'true';
     const providerType = useLocalOllama ? 'ollama' : 'openrouter';
     this.provider = ProviderFactory.getProvider(providerType);
 
     const baseConfig = AI_PROVIDER_CONFIG[providerType];
+    const apiKey = useLocalOllama
+      ? 'ollama'
+      : configService.get<string>('OPENROUTER_API_KEY');
+
     this.config = {
       ...baseConfig,
-      apiKey: useLocalOllama ? 'ollama' : process.env.OPENROUTER_API_KEY,
     };
 
-    if (!this.config.apiKey) {
+    console.log('this.config', this.config);
+
+    if (!useLocalOllama && !apiKey) {
       throw new Error(
         'OPENROUTER_API_KEY environment variable is required when not using local Ollama',
       );
