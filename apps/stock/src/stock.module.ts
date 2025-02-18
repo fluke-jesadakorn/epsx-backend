@@ -11,9 +11,7 @@ import { Exchange, ExchangeSchema } from './schemas/exchange.schema';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
-      cache: true,
-      expandVariables: true,
+      envFilePath: ['.env'],
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],

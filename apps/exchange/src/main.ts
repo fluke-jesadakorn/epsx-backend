@@ -44,16 +44,6 @@ async function bootstrap() {
   const logger = new Logger('ExchangeMicroservice');
 
   try {
-    // Test MongoDB connection
-    const mongoose = require('mongoose');
-    await mongoose.connect(
-      process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017',
-      {
-        dbName: process.env.MONGODB_DB_NAME || 'epsx-exchange',
-      },
-    );
-    logger.log('Successfully connected to MongoDB');
-
     const app = await NestFactory.createMicroservice<MicroserviceOptions>(
       ExchangeModule,
       {

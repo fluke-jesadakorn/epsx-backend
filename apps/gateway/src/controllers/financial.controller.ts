@@ -1,6 +1,7 @@
-import { Controller, Inject, Post, OnModuleInit, Logger } from '@nestjs/common';
+import { Controller, Inject, Post, Get, Query, OnModuleInit, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { EpsGrowthRankingResponseDto } from '../swagger/entities/financial.swagger';
 import { firstValueFrom } from 'rxjs';
 
 @ApiTags('Financial')
@@ -22,6 +23,27 @@ export class FinancialController implements OnModuleInit {
       this.financialService.send({ cmd: 'scrapeFinancialData' }, {}),
     );
     this.logger.log('Financial data scraping request sent to financial service');
+    return response;
+  }
+
+  @Get('eps-growth-ranking')
+  @ApiOperation({ summary: 'Get EPS growth ranking' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns paginated EPS growth ranking data',
+    type: EpsGrowthRankingResponseDto,
+  })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Number of items per page' })
+  @ApiQuery({ name: 'skip', required: false, type: Number, description: 'Number of items to skip' })
+  async getEpsGrowthRanking(
+    @Query('limit') limit?: number,
+    @Query('skip') skip?: number,
+  ) {
+    const pattern = { cmd: 'getEpsGrowthRanking' };
+    const payload = { limit, skip };
+    const response = await firstValueFrom(
+      this.financialService.send(pattern, payload),
+    );
     return response;
   }
 }

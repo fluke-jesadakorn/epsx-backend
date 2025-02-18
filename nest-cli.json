@@ -3,9 +3,6 @@
   "collection": "@nestjs/schematics",
   "monorepo": true,
   "sourceRoot": "src",
-  "compilerOptions": {
-    "deleteOutDir": true
-  },
   "projects": {
     "ai-service": {
       "type": "application",
@@ -13,8 +10,7 @@
       "entryFile": "main",
       "sourceRoot": "apps/ai-service/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/ai-service/tsconfig.json",
-        "webpack": false
+        "tsConfigPath": "apps/ai-service/tsconfig.json"
       }
     },
     "gateway": {
@@ -41,10 +37,7 @@
       "entryFile": "main",
       "sourceRoot": "apps/financial/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/financial/tsconfig.json",
-        "webpack": true,
-        "deleteOutDir": true,
-        "builder": "webpack"
+        "tsConfigPath": "apps/financial/tsconfig.json"
       }
     },
     "exchange": {

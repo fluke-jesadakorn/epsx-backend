@@ -6,48 +6,52 @@ import { ApiProperty } from '@nestjs/swagger';
  * These DTOs define the contract between the API and clients.
  */
 
-export class EPSStockInfoDto {
+export class EpsGrowthDataDto {
   @ApiProperty({ description: 'Stock symbol' })
   symbol: string;
 
-  @ApiProperty({ description: 'Company name', nullable: true })
-  companyName: string | null;
+  @ApiProperty({ description: 'Company name' })
+  company_name: string;
+
+  @ApiProperty({ description: 'Market code' })
+  market_code: string;
 
   @ApiProperty({ description: 'Earnings per share value' })
   eps: number;
 
   @ApiProperty({ description: 'EPS growth percentage' })
-  epsGrowthPercent: number;
+  eps_growth: number;
 
-  @ApiProperty({ description: 'Report date' })
-  reportDate: string;
+  @ApiProperty({ description: 'Rank position in the list' })
+  rank: number;
+
+  @ApiProperty({ description: 'Last report date' })
+  last_report_date: string;
 }
 
-export class EPSGrowthResultDto {
-  @ApiProperty({ type: EPSStockInfoDto })
-  current: EPSStockInfoDto;
+export class EpsGrowthMetadataDto {
+  @ApiProperty({ description: 'Number of items to skip' })
+  skip: number;
 
-  @ApiProperty({ type: EPSStockInfoDto })
-  previous: EPSStockInfoDto;
-}
-
-export class EPSGrowthMetadataDto {
   @ApiProperty({ description: 'Total number of records' })
   total: number;
+
+  @ApiProperty({ description: 'Current page number' })
+  page: number;
 
   @ApiProperty({ description: 'Number of items per page' })
   limit: number;
 
-  @ApiProperty({ description: 'Number of items to skip' })
-  skip: number;
+  @ApiProperty({ description: 'Total number of pages' })
+  totalPages: number;
 }
 
-export class EPSGrowthResponseDto {
-  @ApiProperty({ type: [EPSGrowthResultDto] })
-  data: EPSGrowthResultDto[];
+export class EpsGrowthRankingResponseDto {
+  @ApiProperty({ type: [EpsGrowthDataDto] })
+  data: EpsGrowthDataDto[];
 
-  @ApiProperty({ type: EPSGrowthMetadataDto })
-  metadata: EPSGrowthMetadataDto;
+  @ApiProperty({ type: EpsGrowthMetadataDto })
+  metadata: EpsGrowthMetadataDto;
 }
 
 export class FinancialFetchResponseDto {

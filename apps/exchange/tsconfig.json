@@ -1,14 +1,9 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "./dist",
     "composite": true,
-    "rootDir": "src",
-    "baseUrl": "./src",
-    "paths": {
-      "@epsx/common": ["../../libs/common/src"],
-      "@epsx/common/*": ["../../libs/common/src/*"]
-    }
+    "outDir": "./dist",
+    "baseUrl": "./",
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"],

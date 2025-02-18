@@ -8,7 +8,6 @@
     "start": "bun ./dist/main.js"
   },
   "dependencies": {
-    "@epsx/common": "file:../../libs/common",
     "@nestjs/common": "^11.0.8",
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.0.8",

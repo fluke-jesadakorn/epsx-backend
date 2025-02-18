@@ -24,6 +24,13 @@ RUN apt-get update && apt-get install -y curl && \
 # Copy source code
 COPY . .
 
+# Copy .env.production files for each microservice
+COPY apps/ai-service/.env.production ./apps/ai-service/.env.production
+COPY apps/exchange/.env.production ./apps/exchange/.env.production 
+COPY apps/financial/.env.production ./apps/financial/.env.production
+COPY apps/gateway/.env.production ./apps/gateway/.env.production
+COPY apps/stock/.env.production ./apps/stock/.env.production
+
 # Build all services with specific output paths
 RUN mkdir -p /app/dist/apps && \
     nest build ai-service -p apps/ai-service/tsconfig.json && \
@@ -34,9 +41,9 @@ RUN mkdir -p /app/dist/apps && \
     ls -la apps/*/dist/ && \
     # Move build outputs to expected location
     for service in ai-service exchange financial gateway stock; do \
-        if [ -d "apps/$service/dist" ]; then \
-            mv "apps/$service/dist" "/app/dist/apps/$service"; \
-        fi \
+    if [ -d "apps/$service/dist" ]; then \
+    mv "apps/$service/dist" "/app/dist/apps/$service"; \
+    fi \
     done && \
     # Verify build outputs
     ls -la /app/dist/apps/
@@ -60,6 +67,13 @@ COPY --from=builder /app/dist/apps/exchange ./apps/dist/exchange
 COPY --from=builder /app/dist/apps/gateway ./apps/dist/gateway
 COPY --from=builder /app/node_modules ./node_modules
 
+# Copy .env.production files
+COPY --from=builder /app/apps/ai-service/.env.production ./apps/dist/ai-service/.env.production
+COPY --from=builder /app/apps/exchange/.env.production ./apps/dist/exchange/.env.production
+COPY --from=builder /app/apps/financial/.env.production ./apps/dist/financial/.env.production
+COPY --from=builder /app/apps/gateway/.env.production ./apps/dist/gateway/.env.production
+COPY --from=builder /app/apps/stock/.env.production ./apps/dist/stock/.env.production
+
 # Environment setup for inter-service communication
 ENV AI_SERVICE_HOST=localhost \
     AI_SERVICE_PORT=4400 \
@@ -69,10 +83,10 @@ ENV AI_SERVICE_HOST=localhost \
     FINANCIAL_SERVICE_PORT=4300 \
     EXCHANGE_SERVICE_HOST=localhost \
     EXCHANGE_SERVICE_PORT=4100 \
-    PORT=3000
+    PORT=3001
 
 # Expose gateway port
-EXPOSE 3000
+EXPOSE 3001
 
 # Start all services
 CMD ["bun", "run", "start:all"]

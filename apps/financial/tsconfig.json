@@ -2,13 +2,8 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "composite": true,
-    "declaration": true,
     "outDir": "./dist",
-    "rootDir": "./src",
     "baseUrl": "./",
-    "paths": {
-      "@financial/*": ["./src/*"]
-    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]

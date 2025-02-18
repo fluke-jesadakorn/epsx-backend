@@ -7,6 +7,18 @@ import { Financial, FinancialDocument } from './schemas/financial.schema';
 import { Stock, StockDocument } from './schemas/stock.schema';
 import { UrlIndex, UrlIndexDocument } from './schemas/url-index.schema';
 import { ClientProxy, MessagePattern } from '@nestjs/microservices';
+import { EpsGrowth, EpsGrowthDocument } from './schemas/eps-growth.schema';
+
+// Interface for EPS Growth data response
+export interface EpsGrowthData {
+  symbol: string;
+  company_name: string;
+  market_code: string;
+  eps: number;
+  eps_growth: number;
+  rank: number;
+  last_report_date: string;
+}
 
 const config = {
   maxConcurrentRequests: 3, // Reduced to avoid overloading
@@ -351,8 +363,14 @@ export class FinancialService {
     limit: number = 20,
     skip: number = 0,
   ): Promise<{
-    data: EPSGrowthResult[];
-    metadata: { total: number; limit: number; skip: number };
+    data: EpsGrowthData[];
+    metadata: {
+      skip: number;
+      total: number;
+      page: number;
+      limit: number;
+      totalPages: number;
+    };
   }> {
     try {
       const pipeline: PipelineStage[] = [
@@ -367,8 +385,19 @@ export class FinancialService {
         {
           $group: {
             _id: '$stock_id',
-            latest: { $first: '$$ROOT' },
-            previous: { $nth: { $arrayElemAt: ['$report_date', 19] } },
+            reportDates: { $push: '$$ROOT' }
+          }
+        } as any,
+        {
+          $project: {
+            _id: 1,
+            latest: { $arrayElemAt: ['$reportDates', 0] },
+            previous: { $arrayElemAt: ['$reportDates', 1] }
+          }
+        } as any,
+        {
+          $match: {
+            'previous': { $exists: true }
           },
         } as any,
         {
@@ -385,50 +414,80 @@ export class FinancialService {
         {
           $project: {
             _id: 0,
-            current: {
-              symbol: '$stock.symbol',
-              companyName: '$stock.company_name',
-              eps: '$latest.eps_diluted',
-              epsGrowthPercent: {
-                $cond: [
-                  { $ne: ['$previous.eps_diluted', 0] },
-                  {
-                    $multiply: [
-                      {
-                        $divide: [
-                          {
-                            $subtract: [
-                              '$latest.eps_diluted',
-                              '$previous.eps_diluted',
-                            ],
-                          },
-                          { $abs: '$previous.eps_diluted' },
-                        ],
-                      },
-                      100,
-                    ],
-                  },
-                  null,
-                ],
-              },
-              reportDate: '$latest.report_date',
+            symbol: '$stock.symbol',
+            company_name: '$stock.company_name',
+            market_code: { $ifNull: ['$stock.exchanges.market_code', 'stocks'] },
+            eps: '$latest.eps_diluted',
+            eps_growth: {
+              $cond: [
+                { $ne: ['$previous.eps_diluted', 0] },
+                {
+                  $multiply: [
+                    {
+                      $divide: [
+                        {
+                          $subtract: [
+                            '$latest.eps_diluted',
+                            '$previous.eps_diluted',
+                          ],
+                        },
+                        { $abs: '$previous.eps_diluted' },
+                      ],
+                    },
+                    100,
+                  ],
+                },
+                0,
+              ],
             },
-            previous: {
-              symbol: '$stock.symbol',
-              companyName: '$stock.company_name',
-              eps: '$previous.eps_diluted',
-              epsGrowthPercent: 0,
-              reportDate: '$previous.report_date',
+            last_report_date: { 
+              $dateToString: { 
+                format: '%Y-%m-%d', 
+                date: '$latest.report_date' 
+              } 
             },
           },
         } as any,
         {
           $match: {
-            'current.epsGrowthPercent': { $ne: null },
+            eps_growth: { $ne: null },
           },
         } as any,
         {
-          $sort: { 'current.epsGrowthPercent': -1 },
+          $sort: { eps_growth: -1 },
+        } as any,
+        {
+          $group: {
+            _id: null,
+            items: {
+              $push: {
+                symbol: '$symbol',
+                company_name: '$company_name',
+                market_code: '$market_code',
+                eps: '$eps',
+                eps_growth: '$eps_growth',
+                last_report_date: '$last_report_date'
+              }
+            }
+          }
+        } as any,
+        {
+          $unwind: {
+            path: '$items',
+            includeArrayIndex: 'rank_pos'
+          }
+        } as any,
+        {
+          $replaceRoot: {
+            newRoot: {
+              $mergeObjects: [
+                '$items',
+                {
+                  rank: { $add: [{ $add: ['$rank_pos', skip] }, 1] }
+                }
+              ]
+            }
+          }
         } as any,
         {
           $facet: {
@@ -442,12 +501,18 @@ export class FinancialService {
       const data = result[0].data;
       const total = result[0].total[0]?.count || 0;
 
+      // Calculate page related metadata
+      const page = Math.floor(skip / limit) + 1;
+      const totalPages = Math.ceil(total / limit);
+
       return {
         data,
         metadata: {
-          total,
-          limit,
           skip,
+          total,
+          page,
+          limit,
+          totalPages,
         },
       };
     } catch (error) {

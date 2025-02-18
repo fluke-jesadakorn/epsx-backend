@@ -13,10 +13,7 @@ import { StockController } from './controllers/stock.controller';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
-      cache: true,
-      load: [],
-      expandVariables: true,
+      envFilePath: ['.env'],
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
