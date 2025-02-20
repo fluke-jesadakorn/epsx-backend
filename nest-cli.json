@@ -10,7 +10,8 @@
       "entryFile": "main",
       "sourceRoot": "apps/ai-service/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/ai-service/tsconfig.json"
+        "tsConfigPath": "apps/ai-service/tsconfig.json",
+        "assets": [{ "include": "apps/scheduler/**/*", "watchAssets": true }]
       }
     },
     "common": {
@@ -19,7 +20,8 @@
       "entryFile": "index",
       "sourceRoot": "libs/common/src",
       "compilerOptions": {
-        "tsConfigPath": "libs/common/tsconfig.json"
+        "tsConfigPath": "libs/common/tsconfig.json",
+        "assets": [{ "include": "apps/scheduler/**/*", "watchAssets": true }]
       }
     },
     "exchange": {
@@ -28,7 +30,8 @@
       "entryFile": "main",
       "sourceRoot": "apps/exchange/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/exchange/tsconfig.json"
+        "tsConfigPath": "apps/exchange/tsconfig.json",
+        "assets": [{ "include": "apps/scheduler/**/*", "watchAssets": true }]
       }
     },
     "financial": {
@@ -37,7 +40,8 @@
       "entryFile": "main",
       "sourceRoot": "apps/financial/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/financial/tsconfig.json"
+        "tsConfigPath": "apps/financial/tsconfig.json",
+        "assets": [{ "include": "apps/scheduler/**/*", "watchAssets": true }]
       }
     },
     "gateway": {
@@ -46,16 +50,8 @@
       "entryFile": "main",
       "sourceRoot": "apps/gateway/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/gateway/tsconfig.json"
-      }
-    },
-    "health": {
-      "type": "application",
-      "root": "apps/health",
-      "entryFile": "main",
-      "sourceRoot": "apps/health/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/health/tsconfig.json"
+        "tsConfigPath": "apps/gateway/tsconfig.json",
+        "assets": [{ "include": "apps/scheduler/**/*", "watchAssets": true }]
       }
     },
     "stock": {
@@ -64,7 +60,20 @@
       "entryFile": "main",
       "sourceRoot": "apps/stock/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/stock/tsconfig.json"
+        "tsConfigPath": "apps/stock/tsconfig.json",
+        "watchAssets": true,
+        "assets": [{ "include": "apps/scheduler/**/*", "watchAssets": true }]
+      }
+    },
+    "scheduler": {
+      "type": "application",
+      "root": "apps/scheduler",
+      "entryFile": "main",
+      "sourceRoot": "apps/scheduler/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/scheduler/tsconfig.json",
+        "webpack": true,
+        "assets": [{ "include": "**/*", "watchAssets": true }]
       }
     }
   },

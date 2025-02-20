@@ -86,9 +86,9 @@ export class AiController {
 
       // Re-throw with meaningful message
       throw new Error(
-        errorDetails.message !== 'undefined' 
+        errorDetails.message !== 'undefined'
           ? `Failed to process query: ${errorDetails.message}`
-          : 'Failed to process query. Please try again later.'
+          : 'Failed to process query. Please try again later.',
       );
     }
   }
@@ -110,8 +110,21 @@ export class AiController {
   })
   async chat(@Body() chatDto: ChatQueryDto): Promise<ChatResponseDto> {
     try {
+      // Transform snake_case to camelCase for service
+      const transformedDto = {
+        ...chatDto,
+        maxTokens: chatDto.max_tokens,
+        marketContext: chatDto.market_context,
+        options: {
+          maxTokens: chatDto.max_tokens,
+          temperature: chatDto.temperature,
+        },
+      };
+
+      console.log('Transformed DTO:', transformedDto);
+
       const response = await firstValueFrom(
-        this.aiService.send({ cmd: 'ai.chat' }, chatDto),
+        this.aiService.send('ai.chat', transformedDto),
       );
       return response;
     } catch (error) {
@@ -140,9 +153,9 @@ export class AiController {
 
       // Re-throw with meaningful message
       throw new Error(
-        errorDetails.message !== 'undefined' 
+        errorDetails.message !== 'undefined'
           ? `Failed to process chat: ${errorDetails.message}`
-          : 'Failed to process chat. Please try again later.'
+          : 'Failed to process chat. Please try again later.',
       );
     }
   }

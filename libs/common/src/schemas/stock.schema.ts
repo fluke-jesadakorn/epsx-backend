@@ -1,12 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
-import { ExchangeDocument } from './exchange.schema';
-import { FinancialDocument } from './financial.schema';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
+import { Exchange } from './exchange.schema';
+import type { Financial } from './financial.schema';
 
-export type StockDocument = Stock & Document;
-
+export type StockDocument = HydratedDocument<Stock>;
 @Schema({ timestamps: true, collection: 'stocks' })
 export class Stock {
+  _id: Types.ObjectId;
   @Prop()
   create_by?: string;
 
@@ -27,15 +27,15 @@ export class Stock {
 
   @Prop({
     type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Financial' }],
-    default: [],
   })
-  financials: FinancialDocument[];
+  financial: Financial[];
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,
     required: true,
+    ref: 'Exchange',
   })
-  exchange: ExchangeDocument;
+  exchange: Exchange;
 
   @Prop()
   sector?: string;
@@ -67,7 +67,7 @@ export class Stock {
 export const StockSchema = SchemaFactory.createForClass(Stock);
 
 export interface StockWithMarketCode extends Stock {
-  _id: string;
+  _id: Types.ObjectId;
   market_code: string;
 }
 

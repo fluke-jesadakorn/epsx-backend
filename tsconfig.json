@@ -4,7 +4,6 @@
     "removeComments": true,
     "declaration": true,
     "declarationMap": true,
-    "emitDeclarationOnly": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
@@ -40,6 +39,9 @@
     },
     {
       "path": "./libs/common"
+    },
+    {
+      "path": "./apps/scheduler"
     }
   ],
   "exclude": ["node_modules", "dist"]

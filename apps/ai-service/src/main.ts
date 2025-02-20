@@ -3,15 +3,6 @@ import { Transport, MicroserviceOptions } from '@nestjs/microservices';
 import { Logger, Catch, ArgumentsHost, ExceptionFilter } from '@nestjs/common';
 import { AiModule } from './ai.module';
 
-@Catch()
-class ErrorFilter implements ExceptionFilter {
-  private readonly logger = new Logger('ErrorFilter');
-
-  catch(error: Error, host: ArgumentsHost) {
-    this.logger.error(`Uncaught exception: ${error.message}`, error.stack);
-  }
-}
-
 /**
  * Future improvements:
  * TODO: Implement caching for frequent AI queries
@@ -40,9 +31,6 @@ async function bootstrap() {
       logger: ['error', 'warn', 'log', 'debug', 'verbose'],
     },
   );
-
-  // Add global error handler
-  app.useGlobalFilters(new ErrorFilter());
 
   await app.listen();
   logger.log(

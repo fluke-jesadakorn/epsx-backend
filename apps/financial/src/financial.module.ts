@@ -1,20 +1,24 @@
 import { Module } from '@nestjs/common';
-import { HttpService } from './http.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { FinancialService } from './financial.service';
+import { FinancialController } from './financial.controller';
+import { AggregationService } from './aggregation.service';
+import { CacheService } from './services/cache.service';
+import { EPSBatchProcessingService } from './services/eps-batch-processing.service';
+
 import {
-  FinancialDocument,
+  Financial,
   FinancialSchema,
   Stock,
   StockSchema,
-  UrlIndex,
-  UrlIndexSchema,
+  EPSGrowthProcessing,
+  EPSGrowthProcessingSchema,
+  EPSGrowthBatch,
+  EPSGrowthBatchSchema,
   EpsGrowth,
   EpsGrowthSchema,
 } from '@app/common/schemas';
-import { FinancialService } from './financial.service';
-import { ClientsModule, Transport } from '@nestjs/microservices';
-import { FinancialController } from './financial.controller';
 
 @Module({
   imports: [
@@ -31,14 +35,19 @@ import { FinancialController } from './financial.controller';
       inject: [ConfigService],
     }),
     MongooseModule.forFeature([
-      { name: FinancialDocument.name, schema: FinancialSchema },
+      { name: Financial.name, schema: FinancialSchema },
       { name: Stock.name, schema: StockSchema },
-      { name: UrlIndex.name, schema: UrlIndexSchema },
+      { name: EPSGrowthProcessing.name, schema: EPSGrowthProcessingSchema },
+      { name: EPSGrowthBatch.name, schema: EPSGrowthBatchSchema },
       { name: EpsGrowth.name, schema: EpsGrowthSchema },
     ]),
   ],
   controllers: [FinancialController],
-  providers: [HttpService, FinancialService],
-  exports: [FinancialService],
+  providers: [
+    FinancialService,
+    AggregationService,
+    CacheService,
+    EPSBatchProcessingService,
+  ],
 })
 export class FinancialModule {}

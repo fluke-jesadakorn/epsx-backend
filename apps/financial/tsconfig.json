@@ -1,6 +1,5 @@
 {
   "extends": "../../tsconfig.json",
-  "tsBuildInfoFile": false,
   "compilerOptions": {
     "declaration": true,
     "composite": true,

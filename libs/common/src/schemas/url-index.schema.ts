@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { HydratedDocument } from 'mongoose';
 
-export type UrlIndexDocument = UrlIndex & Document;
+export type UrlIndexDocument = HydratedDocument<UrlIndex>;
 
 @Schema({
   timestamps: true,

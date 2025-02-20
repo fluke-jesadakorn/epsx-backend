@@ -1,12 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
-import { StockDocument } from './stock.schema';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
+import type { Stock } from './stock.schema';
 
+export type FinancialDocument = HydratedDocument<Financial>;
 @Schema({
   timestamps: true,
   collection: 'financials',
 })
-export class FinancialDocument extends Document {
+export class Financial {
   @Prop()
   create_by?: string;
 
@@ -166,8 +167,8 @@ export class FinancialDocument extends Document {
   @Prop({ required: true, type: Number })
   fiscal_year: number;
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Stock', required: true })
-  stock: StockDocument;
+  @Prop({ type: MongooseSchema.Types.ObjectId, required: true, ref: 'Stock' })
+  stock: Stock;
 
   /**
    * TODO: Future Improvements:
@@ -194,7 +195,7 @@ export class FinancialDocument extends Document {
    */
 }
 
-export const FinancialSchema = SchemaFactory.createForClass(FinancialDocument);
+export const FinancialSchema = SchemaFactory.createForClass(Financial);
 
 // Add indexes for common queries and relationships
 FinancialSchema.index({ stock: 1, report_date: -1 }); // Latest financials by stock

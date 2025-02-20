@@ -6,7 +6,7 @@ import {
 } from '@app/common/schemas/ai-provider.schema';
 import { SqlQueryResult } from '@app/common/schemas/sql-query.schema';
 import { ProviderFactory } from './providers/provider.factory';
-import { AI_PROVIDER_CONFIG } from './config/ai-provider.config';
+import { getAiProviderConfig } from './config/ai-provider.config';
 import { QUERY_VALIDATION, SYSTEM_PROMPT } from './config/query-rules.config';
 import {
   BaseMessage,
@@ -28,18 +28,20 @@ export class AiQueryService {
     const useLocalOllama =
       configService.get<string>('USE_LOCAL_OLLAMA') === 'true';
     const providerType = useLocalOllama ? 'ollama' : 'openrouter';
-    this.provider = ProviderFactory.getProvider(providerType);
-
-    const baseConfig = AI_PROVIDER_CONFIG[providerType];
+    const baseConfig = getAiProviderConfig(this.configService)[providerType];
     const apiKey = useLocalOllama
       ? 'ollama'
       : configService.get<string>('OPENROUTER_API_KEY');
 
     this.config = {
       ...baseConfig,
+      apiKey,
+      baseUrl: this.configService.get<string>('OPENROUTER_BASE_URL'),
+      model: this.configService.get<string>('OPENROUTER_MODEL'),
+      type: providerType
     };
 
-    console.log('this.config', this.config);
+    this.provider = ProviderFactory.getProvider(providerType, this.config);
 
     if (!useLocalOllama && !apiKey) {
       throw new Error(
@@ -62,7 +64,7 @@ export class AiQueryService {
         case 'user':
           return new HumanMessage(content);
         case 'assistant':
-          return new HumanMessage(content); // LangChain's AIChatMessage is internal
+          return new SystemMessage(content); // Convert assistant messages to system messages for better context
         default:
           throw new Error(`Unknown message role: ${msg.role}`);
       }
@@ -145,13 +147,34 @@ export class AiQueryService {
     try {
       this.logger.debug('Processing chat query');
 
-      const langChainMessages = this.convertToLangChainMessages(messages);
-      const result = await this.model.invoke(langChainMessages);
+      this.logger.debug('Chat options:', {
+        options,
+        config: this.config,
+        messages: messages.map(m => ({ role: m.role, contentLength: m.content.length }))
+      });
 
-      return {
-        role: 'assistant',
-        content: result.content.toString(),
-      };
+      const langChainMessages = this.convertToLangChainMessages(messages);
+      
+      this.logger.debug('Processing chat query with options:', {
+        messages: messages.map(m => ({ role: m.role, contentLength: m.content.length })),
+        options,
+        config: this.config
+      });
+
+      const result = await this.provider.chat({
+        messages: langChainMessages,
+        model: this.config.model,
+        options: {
+          ...options,
+          config: {
+            ...this.config,
+            maxTokens: options?.maxTokens || (options as any)?.max_tokens || 100000,
+            temperature: options?.temperature || 0.7
+          }
+        }
+      });
+
+      return result.message;
     } catch (error) {
       this.logger.error('Error processing chat query:', error);
       // TODO: Implement more robust error handling and logging

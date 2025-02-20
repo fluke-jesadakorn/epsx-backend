@@ -6,10 +6,12 @@ import { OpenRouterProvider } from './openrouter.provider';
 export class ProviderFactory {
   private static readonly logger = new Logger(ProviderFactory.name);
 
-  static getProvider(providerType: string): AIProvider {
+  static getProvider(providerType: string, config: any = {}): AIProvider {
     switch (providerType.toLowerCase() as ProviderType) {
       case 'openrouter':
-        return new OpenRouterProvider();
+        const provider = new OpenRouterProvider();
+        provider.validateConfig(config);
+        return provider;
       case 'ollama':
         return new OllamaProvider();
       default:

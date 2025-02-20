@@ -4,39 +4,82 @@ import { PaginatedResponse } from './common.swagger';
 export class ExchangeDto {
   @ApiProperty({
     type: String,
-    example: 'New York Stock Exchange',
+    example: '65d1e9b1c445f6f5c8d9a1b2',
+    description: 'MongoDB ObjectId',
   })
-  exchange_name: string;
+  _id: string;
 
   @ApiProperty({
     type: String,
-    example: 'United States',
+    example: 'john.doe@example.com',
+    required: false,
   })
-  country: string;
+  create_by?: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'jane.doe@example.com',
+    required: false,
+  })
+  edit_by?: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'admin@example.com',
+    required: false,
+  })
+  delete_by?: string;
+
+  @ApiProperty({
+    type: Number,
+    example: 1,
+    default: 1,
+    required: false,
+  })
+  version?: number;
 
   @ApiProperty({
     type: String,
     example: 'NYSE',
+    required: true,
   })
   market_code: string;
 
   @ApiProperty({
     type: String,
-    example: 'USD',
+    example: 'New York Stock Exchange',
+    required: true,
   })
-  currency: string;
+  exchange_name: string;
 
   @ApiProperty({
     type: String,
-    example: 'https://www.nyse.com',
+    example: 'The New York Stock Exchange is the world\'s largest stock exchange.',
+    required: false,
   })
-  exchange_url: string;
+  description?: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'North America',
+    required: false,
+  })
+  region?: string;
 
   @ApiProperty({
     type: String,
     example: 'America/New_York',
+    required: false,
   })
-  timezone: string;
+  timezone?: string;
+
+  @ApiProperty({
+    type: [String],
+    example: ['65d1e9b1c445f6f5c8d9a1b3', '65d1e9b1c445f6f5c8d9a1b4'],
+    description: 'Array of Stock ObjectIds',
+    required: false,
+  })
+  stocks?: string[];
 }
 
 export class CreateExchangeRequest extends ExchangeDto {}
@@ -51,17 +94,17 @@ export class UpdateExchangeRequest implements Partial<ExchangeDto> {
 
   @ApiProperty({
     type: String,
-    example: 'United States',
+    example: 'The New York Stock Exchange is the world\'s largest stock exchange.',
     required: false,
   })
-  country?: string;
+  description?: string;
 
   @ApiProperty({
     type: String,
-    example: 'https://www.nyse.com',
+    example: 'North America',
     required: false,
   })
-  exchange_url?: string;
+  region?: string;
 
   @ApiProperty({
     type: String,
@@ -69,6 +112,13 @@ export class UpdateExchangeRequest implements Partial<ExchangeDto> {
     required: false,
   })
   timezone?: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'jane.doe@example.com',
+    required: false,
+  })
+  edit_by?: string;
 }
 
 export class ExchangeResponse extends ExchangeDto {
@@ -83,6 +133,13 @@ export class ExchangeResponse extends ExchangeDto {
     example: '2024-02-15T04:11:16.789Z',
   })
   updatedAt: string;
+
+  @ApiProperty({
+    type: [String],
+    example: ['65d1e9b1c445f6f5c8d9a1b3', '65d1e9b1c445f6f5c8d9a1b4'],
+    description: 'Array of Stock ObjectIds',
+  })
+  stocks: string[];
 }
 
 export class PaginatedExchangeResponse extends PaginatedResponse<ExchangeResponse> {}

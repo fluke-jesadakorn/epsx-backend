@@ -13,8 +13,11 @@ The platform consists of several microservices:
 - **Financial Service** (Port 3002): Processes financial data
 - **Exchange Service** (Port 3003): Manages exchange-related operations
 - **AI Service** (Port 3004): Provides AI-powered analysis
+- **Scheduler Service** (Port 4500): Manages scheduled heavy data processing tasks
 
-## Setup
+## Deployment Options
+
+### Local Development
 
 1. Install dependencies:
 
@@ -43,6 +46,34 @@ bun run start:stock
 bun run start:financial
 bun run start:exchange
 bun run start:ai
+bun run start:scheduler
+```
+
+### Distributed Deployment
+
+The Scheduler Service is designed to run on a separate machine to handle heavy data processing tasks without impacting the main application servers.
+
+#### Setting up Scheduler Service on Another Machine
+
+1. Clone the repository on the target machine
+2. Create environment file:
+```bash
+cd apps/scheduler-service
+cp .env.example .env
+# Configure the service endpoints in .env
+```
+
+3. Build and run using Docker:
+```bash
+# Build the scheduler service image
+docker build -t epsx-scheduler -f apps/scheduler-service/Dockerfile .
+
+# Run the container
+docker run -d \
+  --name epsx-scheduler \
+  --env-file apps/scheduler-service/.env \
+  -p 4500:4500 \
+  epsx-scheduler
 ```
 
 ## Project Structure
@@ -53,7 +84,8 @@ bun run start:ai
 │   ├── stock/           # Stock data service
 │   ├── financial/       # Financial data service
 │   ├── exchange/        # Exchange service
-│   └── ai-service/      # AI analysis service
+│   ├── ai-service/      # AI analysis service
+│   └── scheduler-service/ # Scheduled task service
 ├── libs/
 │   └── common/          # Shared code and utilities
 └── package.json         # Root package.json
@@ -73,15 +105,16 @@ API documentation is available at:
 - Bun >= 1.0.0
 - MongoDB >= 5.0
 - Node.js >= 18 (for development tools)
+- Docker (for distributed deployment)
 
 ### Running in Development Mode
 
 ```bash
 # Start all services in development mode
-bun run start:all
+bun run start:dev
 
 # Start individual service in development mode
-bun run start:gateway:dev
+bun run start:gateway
 ```
 
 ## Testing
@@ -98,7 +131,7 @@ bun test:e2e
 
 - [ ] Add WebSocket support for real-time updates
 - [ ] Implement caching layer with Redis
-- [ ] Add message broker for event-driven architecture
+- [x] Implement distributed task scheduling
 - [ ] Implement circuit breakers for external API calls
 - [ ] Add monitoring and alerting
 - [ ] Implement data streaming for large datasets

@@ -12,7 +12,7 @@ import { AiQueryService } from './ai-query.service';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env'],
+      envFilePath: ['apps/ai-service/.env'],
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
@@ -28,9 +28,13 @@ import { AiQueryService } from './ai-query.service';
     {
       provide: 'AI_PROVIDER',
       useFactory: (configService: ConfigService) => {
-        const providerType =
-          configService.get<string>('AI_PROVIDER_TYPE') || 'ollama';
-        return ProviderFactory.getProvider(providerType);
+        const providerType = configService.get<string>('AI_PROVIDER_TYPE') || 'ollama';
+        const config = {
+          apiKey: configService.get<string>('OPENROUTER_API_KEY'),
+          baseUrl: configService.get<string>('OPENROUTER_BASE_URL'),
+          model: configService.get<string>('OPENROUTER_MODEL'),
+        };
+        return ProviderFactory.getProvider(providerType, config);
       },
       inject: [ConfigService],
     },

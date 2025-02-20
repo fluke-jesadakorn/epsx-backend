@@ -1,9 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
-import { StockDocument } from './stock.schema';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
+import type { Stock } from './stock.schema';
 
+export type ExchangeDocument = HydratedDocument<Exchange>;
 @Schema({ timestamps: true, collection: 'exchanges' })
-export class ExchangeDocument extends Document {
+export class Exchange {
   @Prop()
   create_by?: string;
 
@@ -32,10 +33,10 @@ export class ExchangeDocument extends Document {
   timezone?: string;
 
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Stock' }] })
-  stocks: StockDocument[];
+  stocks: Stock[];
 }
 
-export const ExchangeSchema = SchemaFactory.createForClass(ExchangeDocument);
+export const ExchangeSchema = SchemaFactory.createForClass(Exchange);
 
 // Add indexes
 ExchangeSchema.index({ market_code: 1 }, { unique: true });

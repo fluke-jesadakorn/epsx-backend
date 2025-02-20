@@ -7,11 +7,13 @@ import {
   ChatResponse,
   ProviderType,
   AIMessage,
-  AIRequestOptions
+  AIRequestOptions,
 } from '../types/interfaces';
 import { ChatOpenAI } from '@langchain/openai';
+import { Logger } from '@nestjs/common';
 
 export class OpenRouterProvider implements AIProvider {
+  private readonly logger = new Logger(OpenRouterProvider.name);
   private baseUrl: string = 'https://openrouter.ai/api/v1';
   private defaultModel: string = 'deepseek/deepseek-r1:free';
 
@@ -24,38 +26,48 @@ export class OpenRouterProvider implements AIProvider {
 
   createClient(config: AIProviderConfig) {
     return new ChatOpenAI({
-      modelName: process.env.OPENROUTER_MODEL || this.defaultModel,
-      temperature: 0.3,
+      modelName: config.model || this.defaultModel,
+      temperature: 0.7,
       maxTokens: 1000,
       openAIApiKey: config.apiKey,
       configuration: {
-        baseURL: process.env.OPENROUTER_BASE_URL || this.baseUrl,
+        baseURL: config.baseUrl || this.baseUrl,
         defaultHeaders: {
-          'HTTP-Referer': process.env.SITE_URL || 'http://localhost:3000',
-          'X-Title': process.env.SITE_NAME || 'Local Development',
+          'HTTP-Referer': 'http://localhost:3000',
+          'X-Title': 'EPSX Backend',
+        },
+        defaultQuery: {
+          route: 'openai',
         },
       },
     });
   }
 
-  async generateResponse(messages: AIMessage[], options?: AIRequestOptions): Promise<AIMessage> {
-    const client = this.createClient({
-      apiKey: process.env.OPENROUTER_API_KEY,
-      baseUrl: process.env.OPENROUTER_BASE_URL,
+  async generateResponse(
+    messages: AIMessage[],
+    options?: AIRequestOptions,
+  ): Promise<AIMessage> {
+    const config = options?.config || {
+      apiKey: '',
       model: this.defaultModel,
-      type: ProviderType.OPENROUTER
-    });
+      type: ProviderType.OPENROUTER,
+    };
+    const client = this.createClient(config);
     try {
-      const formattedMessages = messages.map(msg => ({
-        type: msg.role === 'assistant' ? 'assistant' : 'user',
-        role: msg.role,
-        content: msg.content
+      const formattedMessages = Array.from(messages).map((msg) => ({
+        role: msg.role === 'assistant' ? 'assistant' : msg.role === 'system' ? 'system' : 'user',
+        content: msg.content,
       }));
+
+      this.logger.debug('Formatted messages:', formattedMessages);
       const result = await client.invoke(formattedMessages);
-      const content = typeof result.content === 'string' ? result.content : JSON.stringify(result.content);
+      const content =
+        typeof result.content === 'string'
+          ? result.content
+          : JSON.stringify(result.content);
       return {
         role: 'assistant',
-        content
+        content,
       };
     } catch (error) {
       throw new Error(`OpenRouter generation failed: ${error.message}`);
@@ -63,20 +75,22 @@ export class OpenRouterProvider implements AIProvider {
   }
 
   async query(params: AIQueryParams): Promise<AIResponse> {
-    const client = this.createClient({
-      apiKey: process.env.OPENROUTER_API_KEY,
-      baseUrl: process.env.OPENROUTER_BASE_URL,
-      model: params.model,
-      type: ProviderType.OPENROUTER
-    });
+    const config = params.options?.config || {
+      apiKey: '',
+      model: params.model || this.defaultModel,
+      type: ProviderType.OPENROUTER,
+    };
+    const client = this.createClient(config);
     const startTime = Date.now();
 
     try {
-      const formattedPrompt = [{
-        type: 'user',
-        role: 'user',
-        content: params.prompt
-      }];
+      const formattedPrompt = [
+        {
+          type: 'user',
+          role: 'user',
+          content: params.prompt,
+        },
+      ];
       const result = await client.invoke(formattedPrompt);
       const content = Array.isArray(result.content)
         ? result.content
@@ -102,25 +116,21 @@ export class OpenRouterProvider implements AIProvider {
   }
 
   async chat(params: ChatQueryParams): Promise<ChatResponse> {
-    const client = this.createClient({
-      apiKey: process.env.OPENROUTER_API_KEY,
-      baseUrl: process.env.OPENROUTER_BASE_URL,
-      model: params.model,
-      type: ProviderType.OPENROUTER
-    });
+    const config = params.options?.config || {
+      apiKey: '',
+      model: params.model || this.defaultModel,
+      type: ProviderType.OPENROUTER,
+    };
+    const client = this.createClient(config);
     const startTime = Date.now();
 
     try {
-      const messages = params.messages.map((msg) => ({
-        role: msg.role,
+      const formattedMessages = Array.from(params.messages).map((msg) => ({
+        role: msg.role === 'assistant' ? 'assistant' : msg.role === 'system' ? 'system' : 'user',
         content: msg.content,
       }));
 
-      const formattedMessages = messages.map(msg => ({
-        type: msg.role === 'assistant' ? 'assistant' : 'user',
-        role: msg.role,
-        content: msg.content
-      }));
+      this.logger.debug('Chat messages:', formattedMessages);
       const result = await client.invoke(formattedMessages);
       const content = Array.isArray(result.content)
         ? result.content
@@ -136,16 +146,17 @@ export class OpenRouterProvider implements AIProvider {
           content: content,
         },
         usage: {
-          prompt_tokens: Math.ceil(JSON.stringify(messages).length / 4),
+          prompt_tokens: Math.ceil(JSON.stringify(formattedMessages).length / 4),
           completion_tokens: Math.ceil(content.length / 4),
           total_tokens: Math.ceil(
-            (JSON.stringify(messages).length + content.length) / 4,
+            (JSON.stringify(formattedMessages).length + content.length) / 4,
           ),
         },
         model: params.model || this.defaultModel,
         created_at: new Date(startTime),
       };
     } catch (error) {
+      this.logger.error('OpenRouter chat error:', error);
       throw new Error(`OpenRouter chat failed: ${error.message}`);
     }
   }

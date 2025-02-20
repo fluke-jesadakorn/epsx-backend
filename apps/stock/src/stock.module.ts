@@ -7,7 +7,7 @@ import { HttpService } from './http.service';
 import {
   Stock,
   StockSchema,
-  ExchangeDocument,
+  Exchange,
   ExchangeSchema,
 } from '@app/common/schemas';
 import { ExchangeModule } from '@exchange/exchange.module';

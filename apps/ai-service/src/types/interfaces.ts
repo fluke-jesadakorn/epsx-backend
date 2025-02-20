@@ -24,6 +24,7 @@ export interface AIRequestOptions {
   topP?: number;
   frequencyPenalty?: number;
   presencePenalty?: number;
+  config?: AIProviderConfig;
 }
 
 export interface TokenUsage {

@@ -1,27 +1,15 @@
 {
-  "name": "@investing/gateway",
+  "name": "@epsx/gateway",
   "version": "1.0.0",
-  "private": true,
   "scripts": {
     "build": "nest build",
     "start": "bun ./dist/main.js",
     "start:dev": "nest start --watch"
   },
   "dependencies": {
-    "@nestjs/common": "^11.0.8",
-    "@nestjs/config": "^4.0.0",
-    "@nestjs/core": "^11.0.8",
-    "@nestjs/microservices": "^11.0.9",
-    "@nestjs/mongoose": "^11.0.1",
-    "@nestjs/platform-express": "^11.0.8",
-    "@nestjs/swagger": "^11.0.3",
+    "@app/common": "*",
+    "@nestjs/swagger": "^11.0.4",
     "@nestjs/terminus": "^11.0.0",
-    "class-transformer": "^0.5.1",
-    "class-validator": "^0.14.1",
     "mongoose": "^8.10.1"
-  },
-  "devDependencies": {
-    "@types/express": "^5.0.0",
-    "typescript": "^5.7.3"
   }
 }

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Stock, StockDocument, ExchangeDocument } from '@app/common/schemas';
+import { Stock, Exchange } from '@app/common/schemas';
 import { HttpService } from './http.service';
 import {
   StockScreenerResponse,
@@ -31,9 +31,9 @@ export class StockService {
 
   constructor(
     @InjectModel(Stock.name)
-    private stockModel: Model<StockDocument>,
+    private stockModel: Model<Stock>,
     @InjectModel('Exchange')
-    private exchangeModel: Model<ExchangeDocument>,
+    private exchangeModel: Model<Exchange>,
     private readonly httpService: HttpService,
   ) {}
 

@@ -3,7 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ExchangeController } from './exchange.controller';
 import { ExchangeService } from './exchange.service';
-import { ExchangeDocument, ExchangeSchema } from '@app/common/schemas';
+import { Exchange, ExchangeSchema } from '@app/common/schemas';
 
 // TODO: Future Feature - Add caching layer to reduce database load
 // TODO: Future Feature - Add rate limiting for scraping to avoid being blocked
@@ -22,7 +22,7 @@ import { ExchangeDocument, ExchangeSchema } from '@app/common/schemas';
       inject: [ConfigService],
     }),
     MongooseModule.forFeature([
-      { name: ExchangeDocument.name, schema: ExchangeSchema },
+      { name: Exchange.name, schema: ExchangeSchema },
     ]),
   ],
   controllers: [ExchangeController],
@@ -30,7 +30,7 @@ import { ExchangeDocument, ExchangeSchema } from '@app/common/schemas';
   exports: [
     ExchangeService,
     MongooseModule.forFeature([
-      { name: ExchangeDocument.name, schema: ExchangeSchema },
+      { name: Exchange.name, schema: ExchangeSchema },
     ]),
   ],
 })

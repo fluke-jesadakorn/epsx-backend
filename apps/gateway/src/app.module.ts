@@ -75,6 +75,18 @@ import { StockController } from './controllers/stock.controller';
         }),
         inject: [ConfigService],
       },
+      {
+        name: 'SCHEDULER_SERVICE',
+        imports: [ConfigModule],
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.TCP,
+          options: {
+            host: configService.get('SCHEDULER_SERVICE_HOST', 'localhost'),
+            port: configService.get('SCHEDULER_SERVICE_PORT', 4500),
+          },
+        }),
+        inject: [ConfigService],
+      },
     ]),
     TerminusModule,
   ],

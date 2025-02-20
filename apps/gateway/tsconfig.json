@@ -1,19 +1,12 @@
 {
   "extends": "../../tsconfig.json",
-  "declaration": false,
-  "tsBuildInfoFile": false,
   "compilerOptions": {
     "outDir": "../../dist/apps/gateway",
     "module": "commonjs",
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "target": "es2017",
-    "sourceMap": true,
     "baseUrl": "./",
-    "incremental": true,
-    "skipLibCheck": true
+    "removeComments": true,
+    "declaration": true,
+    "composite": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

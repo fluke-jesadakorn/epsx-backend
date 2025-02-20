@@ -3,17 +3,17 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { ExchangeDocument } from '@app/common/schemas/exchange.schema';
+import { Exchange } from '@app/common/schemas';
 
 @Injectable()
 export class ExchangeService {
   constructor(
-    @InjectModel(ExchangeDocument.name)
-    private readonly exchangeModel: Model<ExchangeDocument>,
+    @InjectModel(Exchange.name)
+    private readonly exchangeModel: Model<Exchange>,
   ) {}
 
   // Create
-  async create(exchangeData: Partial<ExchangeDocument>) {
+  async create(exchangeData: Partial<Exchange>) {
     const existingExchange = await this.exchangeModel
       .findOne({ market_code: exchangeData.market_code })
       .exec();
@@ -91,7 +91,7 @@ export class ExchangeService {
   }
 
   // Update
-  async update(marketCode: string, updateData: Partial<ExchangeDocument>) {
+  async update(marketCode: string, updateData: Partial<Exchange>) {
     const exchange = await this.exchangeModel
       .findOneAndUpdate({ market_code: marketCode }, updateData, { new: true })
       .exec();

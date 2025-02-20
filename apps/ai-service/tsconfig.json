@@ -1,15 +1,10 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*"],
 
-  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"],
-  "incremental": false,
-  "tsBuildInfoFile": false,
-  "sourceMap": false,
-  "declaration": false,
   "compilerOptions": {
-    "outDir": "../../dist/apps/ai-service",
+    "declaration": true,
     "composite": true,
+    "outDir": "../../dist/apps/ai-service",
     "baseUrl": "../../",
     "paths": {
       "@apps/*": ["apps/*"],
@@ -21,5 +16,7 @@
     {
       "path": "../../libs/common"
     }
-  ]
+  ],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }

@@ -1,21 +1,185 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class StockResponse {
-  @ApiProperty({ description: 'Stock symbol', example: 'AAPL' })
+export class StockDto {
+  @ApiProperty({
+    type: String,
+    example: '65d1e9b1c445f6f5c8d9a1b2',
+    description: 'MongoDB ObjectId'
+  })
+  _id: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'john.doe@example.com',
+    required: false,
+  })
+  create_by?: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'jane.doe@example.com',
+    required: false,
+  })
+  edit_by?: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'admin@example.com',
+    required: false,
+  })
+  delete_by?: string;
+
+  @ApiProperty({
+    type: Number,
+    example: 1,
+    default: 1,
+    required: false,
+  })
+  version?: number;
+
+  @ApiProperty({
+    type: String,
+    example: 'AAPL',
+    required: true,
+  })
   symbol: string;
 
-  @ApiProperty({ description: 'Company name', example: 'Apple Inc.' })
-  name: string;
+  @ApiProperty({
+    type: String,
+    example: 'Apple Inc.',
+    required: false,
+  })
+  company_name?: string;
 
-  @ApiProperty({ description: 'Current price', example: 175.0 })
-  price: number;
+  @ApiProperty({
+    type: [String],
+    example: ['65d1e9b1c445f6f5c8d9a1b3', '65d1e9b1c445f6f5c8d9a1b4'],
+    description: 'Array of Financial ObjectIds',
+    required: false,
+  })
+  financial?: string[];
+
+  @ApiProperty({
+    type: String,
+    example: '65d1e9b1c445f6f5c8d9a1b5',
+    description: 'Exchange ObjectId',
+    required: true,
+  })
+  exchange: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'Technology',
+    required: false,
+  })
+  sector?: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'Consumer Electronics',
+    required: false,
+  })
+  industry?: string;
+
+  @ApiProperty({
+    type: Number,
+    example: 2850000000000,
+    description: 'Market capitalization in USD',
+    required: false,
+  })
+  market_cap?: number;
+
+  @ApiProperty({
+    type: String,
+    example: 'https://www.apple.com',
+    required: false,
+  })
+  website?: string;
+}
+
+export class CreateStockRequest extends StockDto {}
+
+export class UpdateStockRequest implements Partial<StockDto> {
+  @ApiProperty({
+    type: String,
+    example: 'Apple Inc.',
+    required: false,
+  })
+  company_name?: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'Technology',
+    required: false,
+  })
+  sector?: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'Consumer Electronics',
+    required: false,
+  })
+  industry?: string;
+
+  @ApiProperty({
+    type: Number,
+    example: 2850000000000,
+    required: false,
+  })
+  market_cap?: number;
+
+  @ApiProperty({
+    type: String,
+    example: 'https://www.apple.com',
+    required: false,
+  })
+  website?: string;
+
+  @ApiProperty({
+    type: String,
+    example: 'jane.doe@example.com',
+    required: false,
+  })
+  edit_by?: string;
+}
+
+export class StockResponse extends StockDto {
+  @ApiProperty({
+    type: String,
+    example: '2024-02-15T04:11:16.789Z',
+  })
+  createdAt: string;
+
+  @ApiProperty({
+    type: String,
+    example: '2024-02-15T04:11:16.789Z',
+  })
+  updatedAt: string;
 }
 
 export class PaginatedStockResponse {
-  @ApiProperty({ description: 'Total number of items' })
+  @ApiProperty({ 
+    description: 'Total number of items',
+    example: 100
+  })
   total: number;
 
-  @ApiProperty({ description: 'List of stocks', type: [StockResponse] })
+  @ApiProperty({ 
+    description: 'Current page number',
+    example: 1
+  })
+  page: number;
+
+  @ApiProperty({ 
+    description: 'Number of items per page',
+    example: 10
+  })
+  limit: number;
+
+  @ApiProperty({ 
+    description: 'List of stocks', 
+    type: [StockResponse] 
+  })
   data: StockResponse[];
 }
 
