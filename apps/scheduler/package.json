@@ -1,0 +1,15 @@
+{
+  "name": "@epsx/scheduler",
+  "version": "1.0.0",
+  "description": "Microservice for orchestrating scheduled data processing tasks",
+  "private": true,
+  "scripts": {
+    "build": "nest build",
+    "start": "bun ./dist/main.js",
+    "start:dev": "nest start --watch"
+  },
+  "dependencies": {
+    "@app/common": "*",
+    "@nestjs/schedule": "^4.0.0"
+  }
+}

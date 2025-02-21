@@ -1,111 +1,141 @@
-# Investing Data Scraper
+# Investment Data Platform - Microservices Architecture
 
-A TypeScript application for scraping and storing investment data from investing.com.
+## Overview
+
+This project is a microservices-based platform for handling investment and stock market data. Built with NestJS and using Bun as the runtime, it provides scalable and efficient data processing capabilities.
+
+## Architecture
+
+The platform consists of several microservices:
+
+- **API Gateway** (Port 3000): Entry point for all client requests
+- **Stock Service** (Port 3001): Handles stock-related operations
+- **Financial Service** (Port 3002): Processes financial data
+- **Exchange Service** (Port 3003): Manages exchange-related operations
+- **AI Service** (Port 3004): Provides AI-powered analysis
+- **Scheduler Service** (Port 4500): Manages scheduled heavy data processing tasks
+
+## Deployment Options
+
+### Local Development
+
+1. Install dependencies:
+
+```bash
+bun install
+```
+
+2. Configure environment variables:
+
+```bash
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+3. Start all services:
+
+```bash
+bun run start:all
+```
+
+Or start individual services:
+
+```bash
+bun run start:gateway
+bun run start:stock
+bun run start:financial
+bun run start:exchange
+bun run start:ai
+bun run start:scheduler
+```
+
+### Distributed Deployment
+
+The Scheduler Service is designed to run on a separate machine to handle heavy data processing tasks without impacting the main application servers.
+
+#### Setting up Scheduler Service on Another Machine
+
+1. Clone the repository on the target machine
+2. Create environment file:
+```bash
+cd apps/scheduler-service
+cp .env.example .env
+# Configure the service endpoints in .env
+```
+
+3. Build and run using Docker:
+```bash
+# Build the scheduler service image
+docker build -t epsx-scheduler -f apps/scheduler-service/Dockerfile .
+
+# Run the container
+docker run -d \
+  --name epsx-scheduler \
+  --env-file apps/scheduler-service/.env \
+  -p 4500:4500 \
+  epsx-scheduler
+```
 
 ## Project Structure
 
 ```
-├── src/
-│   ├── config/        # Configuration and environment setup
-│   ├── services/      # Core services (browser, scraper, database)
-│   ├── types/         # TypeScript type definitions
-│   ├── utils/         # Utility functions and helpers
-│   └── scripts/       # Utility scripts for data management
-├── index.ts          # Main application entry point
-└── ...configuration files
+├── apps/
+│   ├── gateway/          # API Gateway service
+│   ├── stock/           # Stock data service
+│   ├── financial/       # Financial data service
+│   ├── exchange/        # Exchange service
+│   ├── ai-service/      # AI analysis service
+│   └── scheduler-service/ # Scheduled task service
+├── libs/
+│   └── common/          # Shared code and utilities
+└── package.json         # Root package.json
 ```
 
-## Features
+## API Documentation
 
-- Web scraping with Playwright
-- Data storage with Supabase
-- Configurable retry mechanisms
-- Detailed logging and error handling
-- Modular and maintainable architecture
-- TypeScript for type safety
+API documentation is available at:
 
-## Prerequisites
-
-- Node.js (v16 or higher)
-- TypeScript
-- Supabase account and project
-- Environment variables configured (see `.env.example`)
-
-## Installation
-
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Copy `.env.example` to `.env` and fill in your credentials:
-   ```bash
-   cp .env.example .env
-   ```
-
-## Usage
-
-### Running the Application
-
-Start the main application:
-```bash
-npm start
-```
-
-### Utility Scripts
-
-Fetch data for configured symbols:
-```bash
-npm run fetch
-```
-
-View stored data:
-```bash
-# View all data
-npm run view
-
-# View data for specific symbol
-npm run view:symbol AAPL
-
-# View data for specific symbol with custom days
-npm run view:symbol AAPL 30
-```
+- Swagger UI: http://localhost:3000/docs
+- OpenAPI JSON: http://localhost:3000/docs-json
 
 ## Development
 
-Run in development mode with auto-reload:
+### Prerequisites
+
+- Bun >= 1.0.0
+- MongoDB >= 5.0
+- Node.js >= 18 (for development tools)
+- Docker (for distributed deployment)
+
+### Running in Development Mode
+
 ```bash
-npm run dev
+# Start all services in development mode
+bun run start:dev
+
+# Start individual service in development mode
+bun run start:gateway
 ```
 
-Build the project:
+## Testing
+
 ```bash
-npm run build
+# Run unit tests
+bun test
+
+# Run e2e tests
+bun test:e2e
 ```
 
 ## Future Enhancements
 
-### Web Scraping
-- Add support for multiple markets/exchanges
-- Implement historical data scraping
-- Add proxy rotation system
-- Implement parallel scraping
-- Add content validation
-
-### Database and Infrastructure
-- Implement user authentication
-- Add real-time subscriptions
-- Add caching layer
-- Implement rate limiting
-- Add automated backup system
-- Implement API versioning
-
-### Data Processing
-- Add data normalization
-- Implement data verification
-- Add support for different data formats
-- Add data quality scoring
-- Implement trend analysis
+- [ ] Add WebSocket support for real-time updates
+- [ ] Implement caching layer with Redis
+- [x] Implement distributed task scheduling
+- [ ] Implement circuit breakers for external API calls
+- [ ] Add monitoring and alerting
+- [ ] Implement data streaming for large datasets
+- [ ] Add automated deployment pipeline
 
 ## Contributing
 
@@ -118,7 +148,3 @@ npm run build
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Disclaimer
-
-This project is for educational purposes only. Ensure you comply with the terms of service of any websites you interact with.

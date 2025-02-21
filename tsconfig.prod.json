@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@app/common": ["./libs/common"],
+      "@app/common/*": ["./libs/common/*"],
+      "@exchange/*": ["./dist/apps/exchange/*"],
+      "@financial/*": ["./dist/apps/financial/*"],
+      "@stock/*": ["./dist/apps/stock/*"]
+    }
+  }
+}

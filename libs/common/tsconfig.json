@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+    "composite": true,
+    "outDir": "../../dist/libs/common",
+    "rootDir": "src",
+    "tsBuildInfoFile": "../../dist/libs/common/.tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "@app/common": ["src/index.ts"],
+      "@app/common/*": ["src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+}

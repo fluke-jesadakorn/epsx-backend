@@ -1,0 +1,17 @@
+{
+  "name": "ai-service",
+  "version": "1.0.0",
+  "description": "AI Service Microservice",
+  "scripts": {
+    "build": "nest build",
+    "start:dev": "nest start --watch",
+    "start": "bun ./dist/main.js"
+  },
+  "dependencies": {
+    "@app/common": "*",
+    "@langchain/community": "^0.3.29",
+    "@langchain/openai": "^0.4.3",
+    "langchain": "^0.3.15",
+    "openai": "^4.83.0"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "exchange",
+  "version": "1.0.0",
+  "description": "Exchange Microservice",
+  "scripts": {
+    "build": "nest build",
+    "start": "bun ./dist/main.js",
+    "start:dev": "nest start --watch"
+  },
+  "dependencies": {
+    "@app/common": "*",
+    "reflect-metadata": "^0.2.1"
+  }
+}

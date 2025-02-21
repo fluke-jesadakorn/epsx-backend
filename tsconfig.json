@@ -1,24 +1,50 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "declaration": true,
     "removeComments": true,
+    "declaration": true,
+    "declarationMap": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "allowSyntheticDefaultImports": true,
-    "target": "ES2021",
-    "sourceMap": true,
-    "outDir": "./dist",
-    "baseUrl": "./",
+    "target": "es2017",
+    "sourceMap": false,
+    "baseUrl": ".",
     "incremental": true,
     "skipLibCheck": true,
-    "strictNullChecks": true,
-    "forceConsistentCasingInFileNames": true,
+    "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
+    "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
+    "composite": true,
     "paths": {
-      "@entities/*": ["src/entities/*"]
+      "@app/common": ["libs/common/src"],
+      "@app/common/*": ["libs/common/src/*"],
+      "@exchange/*": ["apps/exchange/src/*"],
+      "@financial/*": ["apps/financial/src/*"],
+      "@stock/*": ["apps/stock/src/*"],
+      "@scheduler/*": ["apps/scheduler/src/*"],
+      "gateway": ["apps/gateway/src/*"]
     }
-  }
+  },
+  "tsBuildInfoFile": "./dist/root.tsbuildinfo",
+  "references": [
+    {
+      "path": "./apps/financial"
+    },
+    {
+      "path": "./apps/stock"
+    },
+    {
+      "path": "./apps/exchange"
+    },
+    {
+      "path": "./libs/common"
+    },
+    {
+      "path": "./apps/scheduler"
+    }
+  ],
+  "exclude": ["node_modules", "dist"]
 }

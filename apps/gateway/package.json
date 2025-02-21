@@ -1,0 +1,15 @@
+{
+  "name": "@epsx/gateway",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "nest build",
+    "start": "bun ./dist/main.js",
+    "start:dev": "nest start --watch"
+  },
+  "dependencies": {
+    "@app/common": "*",
+    "@nestjs/swagger": "^11.0.4",
+    "@nestjs/terminus": "^11.0.0",
+    "mongoose": "^8.10.1"
+  }
+}

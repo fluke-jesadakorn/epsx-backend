@@ -1,0 +1,30 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "composite": true,
+    "rootDir": "src",
+    "baseUrl": ".",
+    "outDir": "../../dist/apps/scheduler",
+    "tsBuildInfoFile": "../../dist/apps/scheduler/.tsbuildinfo",
+    "paths": {
+      "@exchange/*": ["../exchange/src/*"],
+      "@financial/*": ["../financial/src/*"],
+      "@app/common": ["../../libs/common/src"],
+      "@app/common/*": ["../../libs/common/src/*"]
+    }
+  },
+  "references": [
+    {
+      "path": "../financial"
+    },
+    {
+      "path": "../exchange"
+    },
+    {
+      "path": "../../libs/common"
+    }
+  ],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
+}
