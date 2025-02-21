@@ -1,12 +1,12 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "../../dist/apps/gateway",
-    "module": "commonjs",
-    "baseUrl": "./",
-    "removeComments": true,
     "declaration": true,
-    "composite": true
+    "composite": true,
+    "rootDir": "src",
+    "baseUrl": ".",
+    "outDir": "../../dist/apps/gateway",
+    "tsBuildInfoFile": "../../dist/apps/gateway/.tsbuildinfo"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

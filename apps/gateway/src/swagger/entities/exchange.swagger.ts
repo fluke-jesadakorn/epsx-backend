@@ -144,25 +144,7 @@ export class ExchangeResponse extends ExchangeDto {
 
 export class PaginatedExchangeResponse extends PaginatedResponse<ExchangeResponse> {}
 
-export class ScrapeExchangeResponse {
-  @ApiProperty({
-    type: Number,
-    example: 5,
-  })
-  exchangesScraped: number;
-
-  @ApiProperty({
-    type: [String],
-    example: ['NYSE', 'NASDAQ', 'LSE', 'TSE', 'SSE'],
-  })
-  marketCodes: string[];
-
-  @ApiProperty({
-    type: String,
-    example: '2024-02-15T04:11:16.789Z',
-  })
-  lastScrapedAt: string;
-}
+// Scraping responses moved to stock.swagger.ts to avoid duplication
 
 // Future Features Documentation
 /**

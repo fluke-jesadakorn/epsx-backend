@@ -4,8 +4,9 @@
     "declaration": true,
     "composite": true,
     "rootDir": "src",
-    "baseUrl": "./",
+    "baseUrl": ".",
     "outDir": "../../dist/apps/stock",
+    "tsBuildInfoFile": "../../dist/apps/stock/.tsbuildinfo",
     "paths": {
       "@exchange/*": ["../exchange/src/*"],
       "@financial/*": ["../financial/src/*"],
@@ -24,11 +25,6 @@
       "path": "../../libs/common"
     }
   ],
-  "targets": {
-    "build": {
-      "dependsOn": ["^build:common", "^build:exchange"]
-    }
-  },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "test", "**/*spec.ts"]
 }

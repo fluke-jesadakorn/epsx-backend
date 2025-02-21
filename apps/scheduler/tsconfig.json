@@ -4,8 +4,9 @@
     "declaration": true,
     "composite": true,
     "rootDir": "src",
-    "baseUrl": "./",
+    "baseUrl": ".",
     "outDir": "../../dist/apps/scheduler",
+    "tsBuildInfoFile": "../../dist/apps/scheduler/.tsbuildinfo",
     "paths": {
       "@exchange/*": ["../exchange/src/*"],
       "@financial/*": ["../financial/src/*"],

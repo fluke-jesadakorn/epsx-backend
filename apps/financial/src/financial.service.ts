@@ -114,11 +114,6 @@ export class FinancialService {
           page: Math.floor(skip / limit) + 1,
           limit,
           totalPages: Math.ceil(total / limit),
-          reportPeriod: {
-            date: latestEntry.report_date,
-            year: latestEntry.year,
-            quarter: latestEntry.quarter,
-          },
         },
       };
     } catch (error) {

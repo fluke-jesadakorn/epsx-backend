@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Query, Inject } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Inject, applyDecorators } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
   ApiTags,
@@ -19,18 +19,57 @@ import {
   StockScreenerResponseDto,
 } from '../swagger/entities/stock.swagger';
 
-type StockCommand =
-  | 'getAllStocks'
-  | 'getStocksByExchange'
-  | 'getStockBySymbol'
-  | 'saveStockData'
-  | 'scrapeAllStocks'
-  | 'scrapeStocksByMarketCap'
-  | 'scrapeStocksBySector'
-  | 'scrapeStocksByRegion'
-  | 'scrapeStocksByVolume';
+enum StockCommand {
+  GET_ALL = 'getAllStocks',
+  GET_BY_EXCHANGE = 'getStocksByExchange',
+  GET_BY_SYMBOL = 'getStockBySymbol',
+  SAVE_DATA = 'saveStockData',
+  SCRAPE_ALL = 'scrapeAllStocks',
+  SCRAPE_BY_MARKET_CAP = 'scrapeStocksByMarketCap',
+  SCRAPE_BY_SECTOR = 'scrapeStocksBySector',
+  SCRAPE_BY_REGION = 'scrapeStocksByRegion',
+  SCRAPE_BY_VOLUME = 'scrapeStocksByVolume'
+}
+
+// Reusable API decorators
+const ApiPaginatedResponse = () => {
+  return applyDecorators(
+    ApiQuery({
+      name: 'page',
+      required: false,
+      type: Number,
+      description: 'Page number for pagination',
+    }),
+    ApiQuery({
+      name: 'limit',
+      required: false,
+      type: Number,
+      description: 'Number of items per page',
+    }),
+    ApiResponse({
+      status: 200,
+      description: 'List of stocks retrieved successfully',
+      type: PaginatedStockResponse,
+    })
+  );
+};
+
+const ApiScrapeResponse = () => {
+  return applyDecorators(
+    ApiResponse({
+      status: 200,
+      description: 'Scraping operation completed successfully',
+      type: ScrapingSuccessResponse,
+    }),
+    ApiResponse({
+      status: 500,
+      description: 'Scraping operation failed',
+    })
+  );
+};
 
 @Controller('stocks')
+@ApiTags('Stock')
 export class StockController {
   constructor(
     @Inject('STOCK_SERVICE') private readonly stockService: ClientProxy,
@@ -43,55 +82,25 @@ export class StockController {
     return firstValueFrom(this.stockService.send({ cmd: command }, payload));
   }
 
+  private async handleScrapeOperation(command: StockCommand, payload?: any) {
+    return this.sendCommand<ScrapingSuccessResponse>(command, payload);
+  }
+
   @Get()
-  @ApiTags('Stocks')
   @ApiOperation({ summary: 'Get all stocks with pagination' })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: Number,
-    description: 'Page number for pagination',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Number of items per page',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'List of stocks retrieved successfully',
-    type: PaginatedStockResponse,
-  })
+  @ApiPaginatedResponse()
   async getAllStocks(@Query() params: PaginationParamsDto) {
-    return this.sendCommand('getAllStocks', params);
+    return this.sendCommand(StockCommand.GET_ALL, params);
   }
 
   @Get('exchange/:exchangeId')
-  @ApiTags('Stocks')
   @ApiOperation({ summary: 'Get stocks by exchange with pagination' })
   @ApiParam({
     name: 'exchangeId',
     type: String,
     description: 'Exchange identifier (e.g., NYSE, NASDAQ)',
   })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: Number,
-    description: 'Page number for pagination',
-  })
-  @ApiQuery({
-    name: 'limit',
-    required: false,
-    type: Number,
-    description: 'Number of items per page',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'List of stocks for the specified exchange',
-    type: PaginatedStockResponse,
-  })
+  @ApiPaginatedResponse()
   @ApiResponse({
     status: 404,
     description: 'Exchange not found',
@@ -100,11 +109,10 @@ export class StockController {
     @Param('exchangeId') exchangeId: string,
     @Query() params: PaginationParamsDto,
   ) {
-    return this.sendCommand('getStocksByExchange', { exchangeId, params });
+    return this.sendCommand(StockCommand.GET_BY_EXCHANGE, { exchangeId, params });
   }
 
   @Get('symbol/:symbol')
-  @ApiTags('Stocks')
   @ApiOperation({ summary: 'Get stock by symbol' })
   @ApiParam({
     name: 'symbol',
@@ -121,67 +129,45 @@ export class StockController {
     description: 'Stock not found',
   })
   async getStockBySymbol(@Param('symbol') symbol: string) {
-    return this.sendCommand('getStockBySymbol', symbol);
+    return this.sendCommand(StockCommand.GET_BY_SYMBOL, symbol);
   }
 
   @Post('scrape/:exchangeId')
-  @ApiTags('Stock Scraping')
   @ApiOperation({
     summary: 'Scrape and save stock data for an exchange',
-    description:
-      'Fetches and stores current stock data for all listings on the specified exchange',
+    description: 'Fetches and stores current stock data for all listings on the specified exchange',
   })
   @ApiParam({
     name: 'exchangeId',
     type: String,
     description: 'Exchange identifier (e.g., NYSE, NASDAQ)',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Stock data scraped and saved successfully',
-    type: ScrapingSuccessResponse,
-  })
+  @ApiScrapeResponse()
   @ApiResponse({
     status: 400,
     description: 'Invalid exchange ID or stock data format',
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Scraping or saving operation failed',
   })
   async scrapeStockData(
     @Param('exchangeId') exchangeId: string,
     @Query() filters: StockScreenerFilters,
   ) {
-    return this.sendCommand('saveStockData', { exchangeId, filters });
+    return this.handleScrapeOperation(StockCommand.SAVE_DATA, { exchangeId, filters });
   }
 
   @Post('scrape/all')
-  @ApiTags('Stock Scraping')
   @ApiOperation({
     summary: 'Scrape all stocks from all exchanges',
-    description:
-      'Comprehensive scraping of stock data from all available exchanges',
+    description: 'Comprehensive scraping of stock data from all available exchanges',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Scraping operation completed successfully',
-    type: ScrapingSuccessResponse,
-  })
-  @ApiResponse({
-    status: 500,
-    description: 'Scraping operation failed',
-  })
+  @ApiScrapeResponse()
   async scrapeAllStocks() {
-    return this.sendCommand('scrapeAllStocks');
+    return this.handleScrapeOperation(StockCommand.SCRAPE_ALL);
   }
 
   @Post('scrape/market-cap')
-  @ApiTags('Stock Scraping')
   @ApiOperation({
     summary: 'Scrape stocks by market cap range',
-    description:
-      'Scrape stocks that fall within the specified market cap range',
+    description: 'Scrape stocks that fall within the specified market cap range',
   })
   @ApiQuery({
     name: 'minMarketCap',
@@ -197,11 +183,7 @@ export class StockController {
     description: 'Maximum market cap in millions USD',
     example: 5000,
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Scraping operation completed successfully',
-    type: ScrapingSuccessResponse,
-  })
+  @ApiScrapeResponse()
   @ApiResponse({
     status: 400,
     description: 'Invalid market cap range',
@@ -210,14 +192,13 @@ export class StockController {
     @Query('minMarketCap') minMarketCap?: number,
     @Query('maxMarketCap') maxMarketCap?: number,
   ) {
-    return this.sendCommand('scrapeStocksByMarketCap', {
+    return this.handleScrapeOperation(StockCommand.SCRAPE_BY_MARKET_CAP, {
       minMarketCap,
       maxMarketCap,
     });
   }
 
   @Post('scrape/sector/:sector')
-  @ApiTags('Stock Scraping')
   @ApiOperation({
     summary: 'Scrape stocks by sector',
     description: 'Scrape stocks from a specific industry sector',
@@ -228,17 +209,12 @@ export class StockController {
     description: 'Industry sector to filter by',
     example: 'Technology',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Scraping operation completed successfully',
-    type: ScrapingSuccessResponse,
-  })
+  @ApiScrapeResponse()
   async scrapeStocksBySector(@Param('sector') sector: string) {
-    return this.sendCommand('scrapeStocksBySector', sector);
+    return this.handleScrapeOperation(StockCommand.SCRAPE_BY_SECTOR, sector);
   }
 
   @Post('scrape/region/:region')
-  @ApiTags('Stock Scraping')
   @ApiOperation({
     summary: 'Scrape stocks by region',
     description: 'Scrape stocks from a specific geographic region',
@@ -249,21 +225,15 @@ export class StockController {
     description: 'Geographic region to filter by',
     example: 'APAC',
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Scraping operation completed successfully',
-    type: ScrapingSuccessResponse,
-  })
+  @ApiScrapeResponse()
   async scrapeStocksByRegion(@Param('region') region: string) {
-    return this.sendCommand('scrapeStocksByRegion', region);
+    return this.handleScrapeOperation(StockCommand.SCRAPE_BY_REGION, region);
   }
 
   @Post('scrape/volume')
-  @ApiTags('Stock Scraping')
   @ApiOperation({
     summary: 'Scrape stocks by trading volume',
-    description:
-      'Scrape stocks that meet or exceed the specified minimum trading volume',
+    description: 'Scrape stocks that meet or exceed the specified minimum trading volume',
   })
   @ApiQuery({
     name: 'minVolume',
@@ -272,17 +242,13 @@ export class StockController {
     description: 'Minimum trading volume threshold',
     example: 100000,
   })
-  @ApiResponse({
-    status: 200,
-    description: 'Scraping operation completed successfully',
-    type: ScrapingSuccessResponse,
-  })
+  @ApiScrapeResponse()
   @ApiResponse({
     status: 400,
     description: 'Invalid volume parameter',
   })
   async scrapeStocksByVolume(@Query('minVolume') minVolume: number) {
-    return this.sendCommand('scrapeStocksByVolume', { minVolume });
+    return this.handleScrapeOperation(StockCommand.SCRAPE_BY_VOLUME, { minVolume });
   }
 
   /**

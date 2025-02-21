@@ -1,21 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, PipelineStage, SortOrder } from 'mongoose';
-import { EpsGrowth, EpsGrowthDocument, Financial } from '@app/common/schemas';
+import { EpsGrowth, Financial } from '@app/common/schemas';
 
-interface GetEPSGrowthRankingParams {
-  limit: number;
-  skip: number;
-  market_code?: string;
-  sortBy: string;
-  sortOrder: 'asc' | 'desc';
-}
+import type { PaginatedResponse, PaginationParams, PaginationMetadata } from './types/financial.types';
 
-// Interfaces for aggregation responses
-export interface EpsGrowthData {
+// Base interface for EPS growth data
+interface BaseEpsGrowthData {
   symbol: string;
   company_name: string;
   market_code: string;
+}
+
+// EPS Growth specific interfaces
+export interface EpsGrowthData extends BaseEpsGrowthData {
   eps_diluted: number;
   previous_eps_diluted: number;
   eps_growth: number;
@@ -24,10 +22,7 @@ export interface EpsGrowthData {
   quarter: number;
 }
 
-export interface ThreeQuarterEPSGrowth {
-  symbol: string;
-  company_name: string;
-  market_code: string;
+export interface ThreeQuarterEPSGrowth extends BaseEpsGrowthData {
   quarters: Array<{
     quarter: number;
     year: number;
@@ -38,25 +33,108 @@ export interface ThreeQuarterEPSGrowth {
   average_growth: number;
 }
 
-export interface EPSPriceGrowth {
-  symbol: string;
-  company_name: string;
+interface BaseGrowthCorrelation extends BaseEpsGrowthData {
   eps_growth: number;
-  price_growth: number;
   correlation: number;
   period_start: string;
   period_end: string;
 }
 
-export interface EPSVolumeGrowth {
-  symbol: string;
-  company_name: string;
-  eps_growth: number;
-  volume_growth: number;
-  correlation: number;
-  period_start: string;
-  period_end: string;
+export interface EPSPriceGrowth extends BaseGrowthCorrelation {
+  price_growth: number;
 }
+
+export interface EPSVolumeGrowth extends BaseGrowthCorrelation {
+  volume_growth: number;
+}
+
+export interface GetEPSGrowthRankingParams extends PaginationParams {
+  market_code?: string;
+  sortBy: string;
+  sortOrder: 'asc' | 'desc';
+}
+
+// MongoDB pipeline stages
+const joinStockAndExchange: PipelineStage[] = [
+  {
+    $lookup: {
+      from: 'stocks',
+      localField: 'stock',
+      foreignField: '_id',
+      as: 'stock_info',
+    },
+  },
+  { $unwind: '$stock_info' },
+  {
+    $lookup: {
+      from: 'exchanges',
+      localField: 'stock_info.exchange',
+      foreignField: '_id',
+      as: 'exchange_info',
+    },
+  },
+  { $unwind: '$exchange_info' },
+];
+
+const calculatePreviousEps: PipelineStage[] = [
+  {
+    $setWindowFields: {
+      partitionBy: '$stock_info.symbol',
+      sortBy: { fiscal_year: -1, fiscal_quarter: -1 },
+      output: {
+        previous_eps_diluted: {
+          $shift: {
+            output: '$eps_diluted',
+            by: 1,
+            default: null,
+          },
+        },
+      },
+    },
+  },
+];
+
+const calculateEpsGrowth: PipelineStage[] = [
+  {
+    $addFields: {
+      eps_growth: {
+        $cond: {
+          if: {
+            $and: [
+              { $ne: ['$eps_diluted', null] },
+              { $ne: ['$previous_eps_diluted', null] },
+              { $ne: ['$previous_eps_diluted', 0] },
+            ],
+          },
+          then: {
+            $cond: {
+              if: { $gt: ['$previous_eps_diluted', 0] },
+              then: {
+                $multiply: [
+                  {
+                    $divide: [
+                      { $subtract: ['$eps_diluted', '$previous_eps_diluted'] },
+                      '$previous_eps_diluted',
+                    ],
+                  },
+                  100,
+                ],
+              },
+              else: {
+                $cond: {
+                  if: { $gt: ['$eps_diluted', '$previous_eps_diluted'] },
+                  then: 100,
+                  else: -100,
+                },
+              },
+            },
+          },
+          else: 0,
+        },
+      },
+    },
+  },
+];
 
 @Injectable()
 export class AggregationService {
@@ -69,6 +147,55 @@ export class AggregationService {
     private epsGrowthModel: Model<EpsGrowth>,
   ) {}
 
+  private calculatePaginationMetadata(
+    total: number,
+    { limit, skip }: PaginationParams,
+  ): PaginationMetadata {
+    const page = Math.floor(skip / limit) + 1;
+    const totalPages = Math.ceil(total / limit);
+    return { total, page, limit, totalPages, skip };
+  }
+
+  private async saveBatchEpsGrowth(results: any[], batchSize: number = 1000) {
+    let processed = 0;
+    let failed = 0;
+
+    for (let i = 0; i < results.length; i += batchSize) {
+      const batch = results.slice(i, i + batchSize);
+      try {
+        const operations = batch.map((result) => {
+          const { _id, data } = result;
+          const { _id: dataId, ...updateData } = data;
+
+          return {
+            updateOne: {
+              filter: {
+                symbol: updateData.symbol,
+                year: updateData.year,
+                quarter: updateData.quarter,
+              },
+              update: { $set: updateData },
+              upsert: true,
+            },
+          };
+        });
+
+        const bulkResult = await this.epsGrowthModel.bulkWrite(operations);
+        processed += bulkResult.modifiedCount + bulkResult.upsertedCount;
+        this.logger.log(
+          `Processed batch ${i / batchSize + 1}: ${
+            bulkResult.modifiedCount + bulkResult.upsertedCount
+          } records`,
+        );
+      } catch (error) {
+        this.logger.error(`Error processing batch ${i / batchSize + 1}:`, error);
+        failed += batch.length;
+      }
+    }
+
+    return { processed, failed };
+  }
+
   /**
    * Get EPS Growth Ranking for stocks
    */
@@ -78,16 +205,13 @@ export class AggregationService {
   async getEPSGrowthForSymbol(symbol: string): Promise<EpsGrowthData | null> {
     this.logger.log(`Calculating EPS growth for symbol: ${symbol}`);
     try {
-      // First ensure we have valid symbol
       if (!symbol) {
-        this.logger.warn(
-          'Attempting to calculate EPS growth with undefined symbol',
-        );
+        this.logger.warn('Attempting to calculate EPS growth with undefined symbol');
         return null;
       }
 
-      let pipeline: PipelineStage[] = [
-        // First get the stock document
+      const pipeline: PipelineStage[] = [
+        // Match the stock symbol first for better performance
         {
           $lookup: {
             from: 'stocks',
@@ -95,162 +219,45 @@ export class AggregationService {
             pipeline: [
               {
                 $match: {
-                  $expr: {
-                    $and: [
-                      { $eq: ['$_id', '$$stockId'] },
-                      { $eq: ['$symbol', symbol] },
-                    ],
-                  },
+                  $expr: { $eq: ['$symbol', symbol] },
                 },
               },
             ],
             as: 'stock_info',
           },
         },
-        // Filter out records where stock lookup failed
+        { $match: { 'stock_info.0': { $exists: true } } },
+        ...joinStockAndExchange,
+        ...calculatePreviousEps,
+        ...calculateEpsGrowth,
+        { $sort: { fiscal_year: -1, fiscal_quarter: -1 } },
+        { $limit: 1 },
         {
-          $match: {
-            'stock_info.0': { $exists: true },
+          $project: {
+            symbol: '$stock_info.symbol',
+            company_name: '$stock_info.company_name',
+            market_code: '$exchange_info.market_code',
+            eps_diluted: 1,
+            previous_eps_diluted: 1,
+            eps_growth: 1,
+            report_date: { $toString: '$report_date' },
+            year: '$fiscal_year',
+            quarter: '$fiscal_quarter',
           },
-        },
-        {
-          $unwind: '$stock_info',
-        },
-        // Get exchange info
-        {
-          $lookup: {
-            from: 'exchanges',
-            let: { exchangeId: '$stock_info.exchange' },
-            pipeline: [
-              {
-                $match: {
-                  $expr: { $eq: ['$_id', '$$exchangeId'] },
-                },
-              },
-            ],
-            as: 'exchange_info',
-          },
-        },
-        {
-          $unwind: '$exchange_info',
         },
       ];
 
-      // Add previous EPS field
-      pipeline.push({
-        $setWindowFields: {
-          partitionBy: '$stock_info.symbol',
-          sortBy: { fiscal_year: -1, fiscal_quarter: -1 },
-          output: {
-            previous_eps_diluted: {
-              $shift: {
-                output: '$eps_diluted',
-                by: 1,
-                default: null,
-              },
-            },
-          },
-        },
-      });
+      const results = await this.financialModel.aggregate(pipeline).exec();
 
-      // Calculate EPS growth percentage with improved error handling
-      pipeline.push({
-        $addFields: {
-          eps_growth: {
-            $cond: {
-              if: {
-                $and: [
-                  { $ne: ['$eps_diluted', null] },
-                  { $ne: ['$previous_eps_diluted', null] },
-                  { $ne: ['$previous_eps_diluted', 0] },
-                ],
-              },
-              then: {
-                $cond: {
-                  if: { $gt: ['$previous_eps_diluted', 0] },
-                  then: {
-                    $multiply: [
-                      {
-                        $divide: [
-                          {
-                            $subtract: [
-                              '$eps_diluted',
-                              '$previous_eps_diluted',
-                            ],
-                          },
-                          '$previous_eps_diluted',
-                        ],
-                      },
-                      100,
-                    ],
-                  },
-                  else: {
-                    $cond: {
-                      if: { $gt: ['$eps_diluted', '$previous_eps_diluted'] },
-                      then: 100, // Improvement from negative to positive
-                      else: -100, // Deterioration or stayed negative
-                    },
-                  },
-                },
-              },
-              else: 0, // Default to 0 instead of null for missing/invalid data
-            },
-          },
-        },
-      });
-
-      // Group by stock to get latest data
-      pipeline.push({
-        $sort: { fiscal_year: -1, fiscal_quarter: -1 },
-      });
-
-      pipeline.push({
-        $limit: 1,
-      });
-
-      const result = await this.financialModel.aggregate(pipeline).exec();
-
-      if (!result.length) {
-        this.logger.warn(
-          `No financial data found for symbol: ${symbol}. Pipeline returned no results.`,
-        );
+      if (!results.length) {
+        this.logger.warn(`No financial data found for symbol: ${symbol}`);
         return null;
       }
 
-      const resultCount = result.length;
-      this.logger.debug(
-        `Found ${resultCount} financial records for symbol: ${symbol}`,
-      );
-
-      const data = result[0];
-      this.logger.debug(`EPS calculation results for ${symbol}:`, {
-        eps_diluted: data.eps_diluted,
-        previous_eps_diluted: data.previous_eps_diluted,
-        eps_growth: data.eps_growth,
-        report_date: data.report_date,
-        year: data.fiscal_year,
-        quarter: data.fiscal_quarter,
-      });
-      return {
-        symbol: data.stock_info.symbol,
-        company_name: data.stock_info.company_name,
-        market_code: data.exchange_info.market_code,
-        eps_diluted: data.eps_diluted,
-        previous_eps_diluted: data.previous_eps_diluted,
-        eps_growth: data.eps_growth,
-        report_date: data.report_date,
-        year: data.fiscal_year,
-        quarter: data.fiscal_quarter,
-      };
+      this.logger.debug(`Found EPS data for symbol: ${symbol}`, results[0]);
+      return results[0];
     } catch (error) {
-      this.logger.error(
-        `Error calculating EPS growth for symbol ${symbol}:`,
-        error.message,
-      );
-      this.logger.error(
-        `Error calculating EPS growth for symbol ${symbol}:`,
-        error,
-      );
+      this.logger.error(`Error calculating EPS growth for symbol ${symbol}:`, error);
       return null;
     }
   }
@@ -258,153 +265,61 @@ export class AggregationService {
   async getEPSGrowthRankingOnceQuarter(
     limit: number = 20,
     skip: number = 0,
-  ): Promise<{
-    data: EpsGrowthData[];
-    metadata: {
-      skip: number;
-      total: number;
-      page: number;
-      limit: number;
-      totalPages: number;
-    };
-  }> {
+  ): Promise<PaginatedResponse<EpsGrowthData>> {
     try {
-      let pipeline: PipelineStage[] = [
+      const pipeline: PipelineStage[] = [
+        ...joinStockAndExchange,
+        ...calculatePreviousEps,
+        ...calculateEpsGrowth,
         {
-          $lookup: {
-            from: 'stocks',
-            localField: 'stock',
-            foreignField: '_id',
-            as: 'stock_info',
+          $group: {
+            _id: '$stock',
+            symbol: { $first: '$stock_info.symbol' },
+            company_name: { $first: '$stock_info.company_name' },
+            market_code: { $first: '$exchange_info.market_code' },
+            eps_diluted: { $first: '$eps_diluted' },
+            previous_eps_diluted: { $first: '$previous_eps_diluted' },
+            eps_growth: { $first: '$eps_growth' },
+            report_date: { $first: { $toString: '$report_date' } },
+            year: { $first: '$fiscal_year' },
+            quarter: { $first: '$fiscal_quarter' },
           },
         },
+        { $sort: { year: -1, quarter: -1, eps_growth: -1 } },
         {
-          $unwind: '$stock_info',
-        },
-        {
-          $lookup: {
-            from: 'exchanges',
-            localField: 'stock_info.exchange',
-            foreignField: '_id',
-            as: 'exchange_info',
+          $facet: {
+            data: [{ $skip: skip }, { $limit: limit }],
+            totalCount: [{ $count: 'count' }],
           },
-        },
-        {
-          $unwind: '$exchange_info',
         },
       ];
 
-      // Add previous EPS field
-      pipeline.push({
-        $setWindowFields: {
-          partitionBy: '$stock_info.symbol',
-          sortBy: { fiscal_year: -1, fiscal_quarter: -1 },
-          output: {
-            previous_eps_diluted: {
-              $shift: {
-                output: '$eps_diluted',
-                by: 1,
-                default: null,
-              },
-            },
-          },
-        },
-      });
+      const [result] = await this.financialModel.aggregate(pipeline).exec();
+      const data = result?.data || [];
+      const total = result?.totalCount[0]?.count || 0;
 
-      // Calculate EPS growth percentage
-      pipeline.push({
-        $addFields: {
-          eps_growth: {
-            $cond: {
-              if: {
-                $and: [
-                  { $ne: ['$previous_eps_diluted', null] },
-                  { $ne: ['$previous_eps_diluted', 0] },
-                  { $gt: ['$previous_eps_diluted', 0] },
-                ],
-              },
-              then: {
-                $multiply: [
-                  {
-                    $divide: [
-                      { $subtract: ['$eps_diluted', '$previous_eps_diluted'] },
-                      '$previous_eps_diluted',
-                    ],
-                  },
-                  100,
-                ],
-              },
-              else: null,
-            },
-          },
-        },
-      });
-
-      // Group by stock
-      pipeline.push({
-        $group: {
-          _id: '$stock',
-          symbol: { $first: '$stock_info.symbol' },
-          company_name: { $first: '$stock_info.company_name' },
-          market_code: { $first: '$exchange_info.market_code' },
-          eps_diluted: { $first: '$eps_diluted' },
-          previous_eps_diluted: { $first: '$previous_eps_diluted' },
-          eps_growth: { $first: '$eps_growth' },
-          report_date: { $first: '$report_date' },
-          year: { $first: '$fiscal_year' },
-          quarter: { $first: '$fiscal_quarter' },
-        },
-      });
-
-      // Sort by EPS growth percentage
-      pipeline.push({
-        $sort: { year: -1, quarter: -1, eps_growth: -1 },
-      });
-
-      // Calculate EPS growth
-      pipeline.push({
-        $facet: {
-          data: [{ $skip: skip }, { $limit: limit }],
-          totalCount: [{ $count: 'count' }],
-        },
-      });
-
-      const result = await this.financialModel.aggregate(pipeline).exec();
-
-      const data = result[0]?.data || [];
-      const total = result[0]?.totalCount[0]?.count || 0;
-
-      const page = Math.floor(skip / limit) + 1;
-      const totalPages = Math.ceil(total / limit);
-
+      // Save the results
       const operations = await Promise.all(
-        data.map(async (result) => {
-          const saved = await this.epsGrowthModel.findOneAndUpdate(
+        data.map(result => 
+          this.epsGrowthModel.findOneAndUpdate(
             {
               symbol: result.symbol,
-              report_date: result.report_date,
               year: result.year,
               quarter: result.quarter,
             },
             result,
             { upsert: true, new: true },
-          );
-          this.logger.debug(
-            `Saved EPS growth data for symbol: ${result.symbol}`,
-          );
-          return saved;
-        }),
+          )
+        )
       );
 
       return {
-        data: operations,
-        metadata: {
-          skip,
-          total,
-          page,
-          limit,
-          totalPages,
-        },
+        data: operations.map(doc => ({
+          ...doc.toObject(),
+          _id: doc._id.toString(),
+          report_date: doc.report_date.toISOString(),
+        })) as EpsGrowthData[],
+        metadata: this.calculatePaginationMetadata(total, { limit, skip }),
       };
     } catch (error) {
       this.logger.error('Error calculating EPS growth ranking', error);
@@ -456,79 +371,10 @@ export class AggregationService {
     this.logger.log('Starting batch EPS growth calculation and save process');
 
     try {
-      // Build the pipeline to calculate EPS growth for all stocks
       const pipeline: PipelineStage[] = [
-        // Join with stocks collection
-        {
-          $lookup: {
-            from: 'stocks',
-            localField: 'stock',
-            foreignField: '_id',
-            as: 'stock_info',
-          },
-        },
-        {
-          $unwind: '$stock_info',
-        },
-        // Join with exchanges collection
-        {
-          $lookup: {
-            from: 'exchanges',
-            localField: 'stock_info.exchange',
-            foreignField: '_id',
-            as: 'exchange_info',
-          },
-        },
-        {
-          $unwind: '$exchange_info',
-        },
-        // Calculate previous EPS
-        {
-          $setWindowFields: {
-            partitionBy: '$stock_info.symbol',
-            sortBy: { fiscal_year: -1, fiscal_quarter: -1 },
-            output: {
-              previous_eps_diluted: {
-                $shift: {
-                  output: '$eps_diluted',
-                  by: 1,
-                  default: null,
-                },
-              },
-            },
-          },
-        },
-        // Calculate EPS growth
-        {
-          $addFields: {
-            eps_growth: {
-              $cond: {
-                if: {
-                  $and: [
-                    { $ne: ['$eps_diluted', null] },
-                    { $ne: ['$previous_eps_diluted', null] },
-                    { $ne: ['$previous_eps_diluted', 0] },
-                  ],
-                },
-                then: {
-                  $multiply: [
-                    {
-                      $divide: [
-                        {
-                          $subtract: ['$eps_diluted', '$previous_eps_diluted'],
-                        },
-                        '$previous_eps_diluted',
-                      ],
-                    },
-                    100,
-                  ],
-                },
-                else: 0,
-              },
-            },
-          },
-        },
-        // Project the fields we want to save (explicitly exclude _id)
+        ...joinStockAndExchange,
+        ...calculatePreviousEps,
+        ...calculateEpsGrowth,
         {
           $project: {
             _id: 0,
@@ -538,16 +384,12 @@ export class AggregationService {
             eps_diluted: 1,
             previous_eps_diluted: 1,
             eps_growth: 1,
-            report_date: 1,
+            report_date: { $toString: '$report_date' },
             year: '$fiscal_year',
             quarter: '$fiscal_quarter',
           },
         },
-        // Sort by latest data
-        {
-          $sort: { symbol: 1, year: -1, quarter: -1 },
-        },
-        // Group by symbol to get latest record for each stock
+        { $sort: { symbol: 1, year: -1, quarter: -1 } },
         {
           $group: {
             _id: '$symbol',
@@ -556,50 +398,10 @@ export class AggregationService {
         },
       ];
 
-      // Execute the pipeline
       const results = await this.financialModel.aggregate(pipeline).exec();
-
       this.logger.log(`Found ${results.length} records to process`);
 
-      // Batch save the results
-      const batchSize = 1000;
-      let processed = 0;
-      let failed = 0;
-
-      for (let i = 0; i < results.length; i += batchSize) {
-        const batch = results.slice(i, i + batchSize);
-        try {
-          const operations = batch.map((result) => {
-            // Ensure we don't include any _id fields in the update
-            const { _id, data } = result;
-            const { _id: dataId, ...updateData } = data;
-
-            return {
-              updateOne: {
-                filter: {
-                  symbol: updateData.symbol,
-                  year: updateData.year,
-                  quarter: updateData.quarter,
-                },
-                update: { $set: updateData },
-                upsert: true,
-              },
-            };
-          });
-
-          const bulkResult = await this.epsGrowthModel.bulkWrite(operations);
-          processed += bulkResult.modifiedCount + bulkResult.upsertedCount;
-          this.logger.log(
-            `Processed batch ${i / batchSize + 1}: ${bulkResult.modifiedCount + bulkResult.upsertedCount} records`,
-          );
-        } catch (error) {
-          this.logger.error(
-            `Error processing batch ${i / batchSize + 1}:`,
-            error,
-          );
-          failed += batch.length;
-        }
-      }
+      const { processed, failed } = await this.saveBatchEpsGrowth(results);
 
       return {
         status: 'completed',
@@ -618,43 +420,34 @@ export class AggregationService {
   /**
    * Get EPS Growth Ranking from pre-calculated data
    */
-  async getEPSGrowthRanking(params: GetEPSGrowthRankingParams) {
+  async getEPSGrowthRanking(params: GetEPSGrowthRankingParams): Promise<PaginatedResponse<EpsGrowthData>> {
     try {
-      // Build query
-      const query: any = {};
-      if (params.market_code) {
-        query.market_code = params.market_code;
-      }
-
-      // Build sort object
-      const sortOrder: SortOrder = params.sortOrder === 'asc' ? 1 : -1;
-      const sort: { [key: string]: SortOrder } = {
-        [params.sortBy]: sortOrder,
+      const query = params.market_code ? { market_code: params.market_code } : {};
+      const sortCriteria: Record<string, SortOrder> = { 
+        [params.sortBy]: params.sortOrder === 'asc' ? 1 : -1 
       };
 
-      // Execute query with pagination
-      const [data, total] = await Promise.all([
+      const [docs, total] = await Promise.all([
         this.epsGrowthModel
           .find(query)
-          .sort(sort)
+          .sort(sortCriteria)
           .skip(params.skip)
           .limit(params.limit)
+          .lean()
           .exec(),
         this.epsGrowthModel.countDocuments(query),
       ]);
 
-      const page = Math.floor(params.skip / params.limit) + 1;
-      const totalPages = Math.ceil(total / params.limit);
+      // Convert dates and ObjectIds to strings
+      const data = docs.map(doc => ({
+        ...doc,
+        _id: doc._id.toString(),
+        report_date: doc.report_date.toISOString(),
+      })) as EpsGrowthData[];
 
       return {
         data,
-        metadata: {
-          skip: params.skip,
-          total,
-          page,
-          limit: params.limit,
-          totalPages,
-        },
+        metadata: this.calculatePaginationMetadata(total, params),
       };
     } catch (error) {
       this.logger.error('Error fetching EPS growth ranking', error);

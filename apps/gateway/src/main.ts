@@ -81,7 +81,6 @@ async function bootstrap() {
       .setTitle('Gateway API')
       .setDescription('Gateway service API documentation')
       .setVersion('1.0')
-      .addTag('Health', 'Service health checks')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);

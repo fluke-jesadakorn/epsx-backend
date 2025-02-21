@@ -23,8 +23,8 @@ import {
   UpdateExchangeRequest,
   ExchangeResponse,
   PaginatedExchangeResponse,
-  ScrapeExchangeResponse,
 } from '../swagger/entities/exchange.swagger';
+import { ScrapingSuccessResponse } from '../swagger/entities/stock.swagger';
 import { firstValueFrom } from 'rxjs';
 
 @ApiTags('Exchange')
@@ -157,7 +157,7 @@ export class ExchangeController {
   @ApiResponse({
     status: 200,
     description: 'Exchange data scraped successfully',
-    type: ScrapeExchangeResponse,
+    type: ScrapingSuccessResponse,
   })
   @ApiResponse({ status: 500, description: 'Scraping failed' })
   async scrapeExchanges() {

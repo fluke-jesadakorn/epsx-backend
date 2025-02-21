@@ -232,6 +232,19 @@ export class ScrapingSummaryResponse {
   failedExchanges: number;
 
   @ApiProperty({
+    description: 'Market codes of processed exchanges',
+    example: ['NYSE', 'NASDAQ', 'LSE'],
+    isArray: true,
+  })
+  marketCodes: string[];
+
+  @ApiProperty({
+    description: 'Timestamp of when the scraping was completed',
+    example: '2024-02-15T04:11:16.789Z',
+  })
+  lastScrapedAt: string;
+
+  @ApiProperty({
     description: 'Detailed error messages for failed operations',
     example: [
       'Failed to fetch data for NYSE: Rate limit exceeded',

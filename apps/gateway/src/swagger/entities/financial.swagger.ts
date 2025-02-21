@@ -683,7 +683,115 @@ export class CalculateAndSaveAllEPSGrowthResponseDto {
   };
 }
 
+/**
+ * Parameters for the deprecated getEPSGrowthRanking endpoint.
+ * @deprecated Use GetEPSGrowthRankingV1ParamsDto instead.
+ */
 export class GetEPSGrowthRankingParamsDto {
+  @ApiProperty({
+    description: 'Number of records to return per page',
+    example: 20,
+    required: false,
+    default: 20
+  })
+  limit?: number;
+
+  @ApiProperty({
+    description: 'Number of records to skip for pagination',
+    example: 0,
+    required: false,
+    default: 0
+  })
+  skip?: number;
+}
+
+/**
+ * Parameters for the v1 getEPSGrowthRanking endpoint.
+ * Includes advanced filtering and sorting capabilities.
+ */
+export class GetEPSGrowthRankingV1ParamsDto {
+  @ApiProperty({
+    description: 'Number of records to return per page',
+    example: 20,
+    required: false,
+    default: 20,
+    minimum: 1,
+    maximum: 100
+  })
+  limit?: number;
+
+  @ApiProperty({
+    description: 'Number of records to skip for pagination',
+    example: 0,
+    required: false,
+    default: 0,
+    minimum: 0
+  })
+  skip?: number;
+
+  @ApiProperty({
+    description: 'Market code to filter stocks (e.g., SET, NYSE, NASDAQ)',
+    example: 'SET',
+    required: false
+  })
+  market_code?: string;
+
+  @ApiProperty({
+    description: 'Field to sort results by',
+    example: 'eps_growth',
+    required: false,
+    default: 'eps_growth',
+    enum: ['eps_growth', 'eps', 'rank']
+  })
+  sortBy?: string;
+
+  @ApiProperty({
+    description: 'Sort direction (ascending or descending)',
+    example: 'desc',
+    enum: ['asc', 'desc'],
+    required: false,
+    default: 'desc'
+  })
+  sortOrder?: 'asc' | 'desc';
+}
+
+/**
+ * Response for the deprecated getEPSGrowthRanking endpoint.
+ * @deprecated Use GetEPSGrowthRankingV1ResponseDto instead.
+ */
+export class GetEPSGrowthRankingResponseDto {
+  @ApiProperty({
+    type: [EpsGrowthDataDto],
+    description: 'List of EPS growth records'
+  })
+  data: EpsGrowthDataDto[];
+
+  @ApiProperty({
+    description: 'Response metadata',
+    type: EpsGrowthMetadataDto
+  })
+  metadata: EpsGrowthMetadataDto;
+}
+
+/**
+ * Response for the v1 getEPSGrowthRanking endpoint.
+ * Includes advanced filtering and sorting results.
+ */
+export class GetEPSGrowthRankingV1ResponseDto {
+  @ApiProperty({
+    type: [EpsGrowthDataDto],
+    description: 'List of filtered and sorted EPS growth records'
+  })
+  data: EpsGrowthDataDto[];
+
+  @ApiProperty({
+    description: 'Response metadata with pagination details',
+    type: EpsGrowthMetadataDto
+  })
+  metadata: EpsGrowthMetadataDto;
+}
+
+export class GetEPSGrowthRankingOnceQuarterParamsDto {
   @ApiProperty({
     description: 'Number of records to return',
     example: 20,
@@ -699,77 +807,20 @@ export class GetEPSGrowthRankingParamsDto {
     default: 0
   })
   skip?: number;
-
-  @ApiProperty({
-    description: 'Market code to filter by',
-    example: 'SET',
-    required: false
-  })
-  market_code?: string;
-
-  @ApiProperty({
-    description: 'Field to sort by',
-    example: 'eps_growth',
-    required: false,
-    default: 'eps_growth'
-  })
-  sortBy?: string;
-
-  @ApiProperty({
-    description: 'Sort order',
-    example: 'desc',
-    enum: ['asc', 'desc'],
-    required: false,
-    default: 'desc'
-  })
-  sortOrder?: 'asc' | 'desc';
 }
 
-export class GetEPSGrowthRankingResponseDto {
+export class GetEPSGrowthRankingOnceQuarterResponseDto {
   @ApiProperty({
     type: [EpsGrowthDataDto],
-    description: 'List of EPS growth records'
+    description: 'List of EPS growth records for the most recent quarter'
   })
   data: EpsGrowthDataDto[];
 
   @ApiProperty({
     description: 'Response metadata',
-    type: 'object',
-    properties: {
-      skip: {
-        type: 'number',
-        description: 'Number of records skipped',
-        example: 0
-      },
-      total: {
-        type: 'number',
-        description: 'Total number of records',
-        example: 900
-      },
-      page: {
-        type: 'number',
-        description: 'Current page number',
-        example: 1
-      },
-      limit: {
-        type: 'number',
-        description: 'Number of records per page',
-        example: 20
-      },
-      totalPages: {
-        type: 'number',
-        description: 'Total number of pages',
-        example: 45
-      }
-    }
+    type: EpsGrowthMetadataDto
   })
-  metadata: {
-    skip: number;
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-  };
+  metadata: EpsGrowthMetadataDto;
 }
 
 export class HealthCheckResponseDto {

@@ -2,6 +2,7 @@ import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { FinancialService } from './financial.service';
 import { AggregationService, EpsGrowthData } from './aggregation.service';
+import { PaginatedResponse } from './types/financial.types';
 
 interface GetEPSGrowthRankingParams {
   limit?: number;
@@ -38,7 +39,7 @@ export class FinancialController {
   }
 
   @MessagePattern({ cmd: 'getEPSGrowthRanking' })
-  async getEPSGrowthRanking(@Payload() data: GetEPSGrowthRankingParams) {
+  async getEPSGrowthRanking(@Payload() data: GetEPSGrowthRankingParams): Promise<PaginatedResponse<EpsGrowthData>> {
     const parsedData = {
       limit: data.limit ? parseInt(data.limit.toString(), 10) : 20,
       skip: data.skip ? parseInt(data.skip.toString(), 10) : 0,
@@ -53,7 +54,7 @@ export class FinancialController {
   @MessagePattern({ cmd: 'getEPSGrowthRankingOnceQuarter' })
   async getEPSGrowthRankingOnceQuarter(
     @Payload() data: { limit?: number; skip?: number },
-  ) {
+  ): Promise<PaginatedResponse<EpsGrowthData>> {
     const parsedLimit = data.limit ? parseInt(data.limit.toString(), 10) : 20;
     const parsedSkip = data.skip ? parseInt(data.skip.toString(), 10) : 0;
 

@@ -23,7 +23,9 @@
       "@app/common/*": ["libs/common/src/*"],
       "@exchange/*": ["apps/exchange/src/*"],
       "@financial/*": ["apps/financial/src/*"],
-      "@stock/*": ["apps/stock/src/*"]
+      "@stock/*": ["apps/stock/src/*"],
+      "@scheduler/*": ["apps/scheduler/src/*"],
+      "gateway": ["apps/gateway/src/*"]
     }
   },
   "tsBuildInfoFile": "./dist/root.tsbuildinfo",

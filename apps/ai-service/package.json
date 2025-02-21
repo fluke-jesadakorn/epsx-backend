@@ -3,12 +3,9 @@
   "version": "1.0.0",
   "description": "AI Service Microservice",
   "scripts": {
-    "start:dev": "nest start --watch",
-    "start": "bun ./dist/main.js",
     "build": "nest build",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage"
+    "start:dev": "nest start --watch",
+    "start": "bun ./dist/main.js"
   },
   "dependencies": {
     "@app/common": "*",

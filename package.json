@@ -12,12 +12,12 @@
     "start": "bun run start:all",
     "build": "nest build",
     "build:common": "tsc -b libs/common",
-    "build:ai": "bun build:common && nest build ai-service",
-    "build:exchange": "bun build:common && nest build exchange",
-    "build:financial": "bun build:common && nest build financial",
-    "build:gateway": "bun build:common && nest build gateway",
-    "build:stock": "bun build:common && nest build stock",
-    "build:scheduler": "bun build:common && nest build scheduler",
+    "build:ai": "bun build:common && tsc -b apps/ai-service",
+    "build:exchange": "bun build:common && tsc -b apps/exchange",
+    "build:financial": "bun build:common && tsc -b apps/financial",
+    "build:gateway": "bun build:common && tsc -b apps/gateway",
+    "build:stock": "bun build:common && tsc -b apps/stock",
+    "build:scheduler": "bun build:common && tsc -b apps/scheduler",
     "start:gateway": "bun build:common && nest start gateway --watch",
     "start:gateway:prod": "bun dist/apps/gateway/main.js",
     "start:ai": "bun build:common && nest start ai-service --watch",
@@ -32,7 +32,7 @@
     "start:scheduler:prod": "bun dist/apps/scheduler/main.js",
     "build:all": "bun run build:ai && bun run build:exchange && bun run build:financial && bun run build:gateway && bun run build:stock && bun run build:scheduler",
     "start:dev": "concurrently -n \"AI,EXCHANGE,FINANCIAL,STOCK,GATEWAY,SCHEDULER\" -c \"yellow,blue,green,magenta,cyan,red\" \"bun run start:ai\" \"bun run start:exchange\" \"bun run start:financial\" \"bun run start:stock\" \"bun run start:gateway\" \"bun run start:scheduler\"",
-    "start:all": "concurrently \"bun run start:gateway:prod\" \"bun run start:ai:prod\" \"bun run start:exchange:prod\" \"bun run start:financial:prod\" \"bun run start:stock:prod\" \"bun run start:scheduler:prod\"",
+    "start:all": "concurrently -n \"AI,EXCHANGE,FINANCIAL,STOCK,GATEWAY,SCHEDULER\" -c \"yellow,blue,green,magenta,cyan,red\" \"bun run start:ai:prod\" \"bun run start:exchange:prod\" \"bun run start:financial:prod\" \"bun run start:stock:prod\" \"bun run start:gateway:prod\" \"bun run start:scheduler:prod\"",
     "lint": "eslint '{apps,libs}/**/*.ts' --fix"
   },
   "devDependencies": {
@@ -64,8 +64,7 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.7.3",
-    "typescript-eslint": "^8.23.0",
-    "concurrently": "^8.2.2"
+    "typescript-eslint": "^8.23.0"
   },
   "dependencies": {
     "@langchain/community": "^0.3.29",
@@ -93,6 +92,7 @@
     "mongoose": "^8.10.1",
     "openai": "^4.83.0",
     "rxjs": "^7.8.1",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "concurrently": "^8.2.2"
   }
 }

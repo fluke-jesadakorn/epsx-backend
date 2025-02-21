@@ -3,11 +3,13 @@
   "compilerOptions": {
     "declaration": true,
     "composite": true,
-    "baseUrl": "../../",
+    "rootDir": "src",
+    "baseUrl": ".",
     "outDir": "../../dist/apps/exchange",
+    "tsBuildInfoFile": "../../dist/apps/exchange/.tsbuildinfo",
     "paths": {
-      "@app/common": ["libs/common/src"],
-      "@app/common/*": ["libs/common/src/*"]
+      "@app/common": ["../../libs/common/src"],
+      "@app/common/*": ["../../libs/common/src/*"]
     }
   },
   "references": [

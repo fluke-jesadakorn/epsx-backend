@@ -1,40 +1,47 @@
+# Version control
+.git
+.gitignore
+
 # Dependencies
 node_modules
 **/node_modules
-.pnp
-.pnp.js
 
-# Testing
-coverage
-.nyc_output
-
-# Production
-/dist
-/build
+# Build outputs
+dist
+build
 **/dist
 **/build
 
-# Misc
-.DS_Store
-.idea
+# Development files
+!.env
+!**/.env
+!.env.*
+!**/.env.*
+!.env.example
+!**/.env.example
+
+# IDE files
 .vscode
-*.pem
+.idea
+*.swp
+*.swo
+
+# Logs
+logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Git
-.git
-.gitignore
+# Test coverage
+coverage
+.nyc_output
 
-# Docker
-Dockerfile
-.dockerignore
+# OS files
+.DS_Store
+Thumbs.db
 
-# Development files
-README.md
-CHANGELOG.md
-**/*.test.ts
-**/*.spec.ts
-**/__tests__
+# Project specific
+TODO/
+*.md
+!README.md

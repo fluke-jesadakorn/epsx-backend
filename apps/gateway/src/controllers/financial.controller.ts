@@ -100,7 +100,10 @@ export class FinancialController implements OnModuleInit {
   }
 
   @Get('eps-growth/ranking')
-  @ApiOperation({ summary: 'Get EPS growth ranking from pre-calculated data' })
+  @ApiOperation({ 
+    summary: 'Get EPS growth ranking from pre-calculated data',
+    description: 'Get EPS growth ranking with advanced filtering and sorting options'
+  })
   @ApiResponse({
     status: 200,
     description: 'Returns filtered and sorted EPS growth ranking data',
@@ -110,56 +113,62 @@ export class FinancialController implements OnModuleInit {
     name: 'limit',
     required: false,
     type: Number,
-    description: 'Number of records to return',
+    description: 'Number of records to return (default: 20)',
     example: 20,
   })
   @ApiQuery({
     name: 'skip',
     required: false,
     type: Number,
-    description: 'Number of records to skip',
+    description: 'Number of records to skip for pagination',
     example: 0,
   })
   @ApiQuery({
     name: 'market_code',
     required: false,
     type: String,
-    description: 'Market code to filter by',
+    description: 'Market code to filter records by',
     example: 'SET',
   })
   @ApiQuery({
     name: 'sortBy',
     required: false,
     type: String,
-    description: 'Field to sort by',
+    description: 'Field to sort records by (default: eps_growth)',
     example: 'eps_growth',
   })
   @ApiQuery({
     name: 'sortOrder',
     required: false,
     type: String,
-    description: 'Sort order (asc/desc)',
+    description: 'Sort direction (default: desc)',
     enum: ['asc', 'desc'],
     example: 'desc',
   })
-  async getEPSGrowthRanking(
-    @Query('limit') limit?: number,
-    @Query('skip') skip?: number,
+  async getEPSGrowthRankingV1(
+    @Query('limit') limit = 20,
+    @Query('skip') skip = 0,
     @Query('market_code') market_code?: string,
-    @Query('sortBy') sortBy?: string,
-    @Query('sortOrder') sortOrder?: 'asc' | 'desc',
+    @Query('sortBy') sortBy = 'eps_growth',
+    @Query('sortOrder') sortOrder: 'asc' | 'desc' = 'desc',
   ) {
     const pattern = { cmd: 'getEPSGrowthRanking' };
-    const payload = { limit, skip, market_code, sortBy, sortOrder };
+    const payload = {
+      limit: Number(limit),
+      skip: Number(skip),
+      market_code,
+      sortBy,
+      sortOrder
+    };
     return await firstValueFrom(
       this.financialService.send(pattern, payload),
     );
   }
 
-  @Get('getEPSGrowthRankingOnceQuarter')
+  @Get('eps-growth/ranking')
   @ApiOperation({ 
-    summary: 'Get EPS growth ranking (Legacy)',
-    description: 'DEPRECATED: Use /eps-growth/ranking instead. This endpoint will be removed in future versions.'
+    summary: 'Get EPS growth ranking from pre-calculated data',
+    description: 'DEPRECATED: Use /v1/eps-growth/ranking instead. This endpoint will be removed in future versions.'
   })
   @ApiResponse({
     status: 200,
@@ -178,11 +187,11 @@ export class FinancialController implements OnModuleInit {
     type: Number,
     description: 'Number of items to skip',
   })
-  async getEPSGrowthRankingOnceQuarter(
+  async getEPSGrowthRanking(
     @Query('limit') limit?: number,
     @Query('skip') skip?: number,
   ) {
-    const pattern = { cmd: 'getEPSGrowthRankingOnceQuarter' };
+    const pattern = { cmd: 'getEPSGrowthRanking' };
     const payload = { limit, skip };
     const response = await firstValueFrom(
       this.financialService.send(pattern, payload),
