@@ -3,7 +3,6 @@ FROM oven/bun:1.2.2
 
 # Set working directory and environment variables
 WORKDIR /app
-ENV PORT=3001
 
 # Copy package files for workspace and all apps/libs
 COPY package.json bun.lock ./
@@ -23,7 +22,7 @@ COPY . .
 RUN bun run build:all
 
 # Expose the port
-EXPOSE ${PORT}
+EXPOSE 3001
 
 # Set the entrypoint
 ENTRYPOINT ["bun", "start:all"]
