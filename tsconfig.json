@@ -13,37 +13,19 @@
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": false,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false,
-    "composite": true,
     "paths": {
-      "@app/common": ["libs/common/src"],
-      "@app/common/*": ["libs/common/src/*"],
-      "@exchange/*": ["apps/exchange/src/*"],
-      "@financial/*": ["apps/financial/src/*"],
-      "@stock/*": ["apps/stock/src/*"],
       "@scheduler/*": ["apps/scheduler/src/*"],
-      "gateway": ["apps/gateway/src/*"]
+      "@market/*": ["apps/market/src/*"],
+      "gateway": ["apps/gateway/src/*"],
     }
   },
   "tsBuildInfoFile": "./dist/root.tsbuildinfo",
   "references": [
     {
-      "path": "./apps/financial"
-    },
-    {
-      "path": "./apps/stock"
-    },
-    {
-      "path": "./apps/exchange"
-    },
-    {
-      "path": "./libs/common"
-    },
-    {
       "path": "./apps/scheduler"
+    },
+    {
+      "path": "./apps/market"
     }
   ],
   "exclude": ["node_modules", "dist"]

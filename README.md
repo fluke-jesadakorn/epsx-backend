@@ -1,150 +1,176 @@
-# Investment Data Platform - Microservices Architecture
+# Firebase Integration Guide
 
-## Overview
+## Backend Setup (NestJS)
 
-This project is a microservices-based platform for handling investment and stock market data. Built with NestJS and using Bun as the runtime, it provides scalable and efficient data processing capabilities.
+The backend is already configured with Firebase Admin SDK. Ensure your `.env` file has the following Firebase configurations:
 
-## Architecture
+```env
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_PRIVATE_KEY=your-private-key
+FIREBASE_CLIENT_EMAIL=your-service-account-email
+FIREBASE_STORAGE_BUCKET=your-storage-bucket
+```
 
-The platform consists of several microservices:
+To get these credentials:
+1. Go to Firebase Console -> Project Settings -> Service Accounts
+2. Click "Generate New Private Key"
+3. Use the downloaded JSON file to fill in the environment variables
 
-- **API Gateway** (Port 3000): Entry point for all client requests
-- **Stock Service** (Port 3001): Handles stock-related operations
-- **Financial Service** (Port 3002): Processes financial data
-- **Exchange Service** (Port 3003): Manages exchange-related operations
-- **AI Service** (Port 3004): Provides AI-powered analysis
-- **Scheduler Service** (Port 4500): Manages scheduled heavy data processing tasks
+## Frontend Setup (Next.js)
 
-## Deployment Options
-
-### Local Development
-
-1. Install dependencies:
+1. Install the required dependencies:
 
 ```bash
-bun install
+npm install firebase
+# or
+yarn add firebase
 ```
 
-2. Configure environment variables:
+2. Create `src/config/firebase.config.ts`:
 
-```bash
-cp .env.example .env
-# Edit .env with your configuration
+```typescript
+// src/config/firebase.config.ts
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
+
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+};
+
+// Initialize Firebase
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+export { app, auth, db, storage };
 ```
 
-3. Start all services:
+3. Create `.env.local` in your Next.js project:
 
-```bash
-bun run start:all
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your-api-key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
+NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
 ```
 
-Or start individual services:
+Get these values from:
+1. Go to Firebase Console -> Project Settings -> General
+2. Scroll down to "Your apps" section
+3. Click the web app icon (</>)
+4. Register app and copy the configuration
 
-```bash
-bun run start:gateway
-bun run start:stock
-bun run start:financial
-bun run start:exchange
-bun run start:ai
-bun run start:scheduler
+## Connecting Frontend to Backend
+
+1. Create an authentication utility in your Next.js app:
+
+```typescript
+// src/utils/auth.ts
+import { auth } from '@/config/firebase.config';
+
+export const getIdToken = async () => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('No user logged in');
+  return await user.getIdToken();
+};
+
+export const appendAuthHeader = async (headers: HeadersInit = {}) => {
+  const token = await getIdToken();
+  return {
+    ...headers,
+    Authorization: `Bearer ${token}`,
+  };
+};
 ```
 
-### Distributed Deployment
+2. Use the auth utility in your API calls:
 
-The Scheduler Service is designed to run on a separate machine to handle heavy data processing tasks without impacting the main application servers.
+```typescript
+// src/utils/api.ts
+import { appendAuthHeader } from './auth';
 
-#### Setting up Scheduler Service on Another Machine
+export const api = {
+  async get(endpoint: string) {
+    const headers = await appendAuthHeader();
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+      headers,
+    });
+    return response.json();
+  },
 
-1. Clone the repository on the target machine
-2. Create environment file:
-```bash
-cd apps/scheduler-service
-cp .env.example .env
-# Configure the service endpoints in .env
+  async post(endpoint: string, data: any) {
+    const headers = await appendAuthHeader({
+      'Content-Type': 'application/json',
+    });
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data),
+    });
+    return response.json();
+  },
+  // Add other methods as needed
+};
 ```
 
-3. Build and run using Docker:
-```bash
-# Build the scheduler service image
-docker build -t epsx-scheduler -f apps/scheduler-service/Dockerfile .
+3. Example usage in a Next.js component:
 
-# Run the container
-docker run -d \
-  --name epsx-scheduler \
-  --env-file apps/scheduler-service/.env \
-  -p 4500:4500 \
-  epsx-scheduler
+```typescript
+// src/app/example/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { auth } from '@/config/firebase.config';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { api } from '@/utils/api';
+
+export default function ExamplePage() {
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      // Login with Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Get data from backend using Firebase token
+      const data = await api.get('/protected-endpoint');
+      console.log('Protected data:', data);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ... rest of your component
+}
 ```
 
-## Project Structure
+## Security Notes
 
-```
-├── apps/
-│   ├── gateway/          # API Gateway service
-│   ├── stock/           # Stock data service
-│   ├── financial/       # Financial data service
-│   ├── exchange/        # Exchange service
-│   ├── ai-service/      # AI analysis service
-│   └── scheduler-service/ # Scheduled task service
-├── libs/
-│   └── common/          # Shared code and utilities
-└── package.json         # Root package.json
-```
+1. Backend Verification:
+   - The backend is already set up to verify Firebase tokens
+   - Use the `FirebaseService.verifyIdToken()` method to validate incoming tokens
 
-## API Documentation
+2. Frontend Security:
+   - Always use environment variables with `NEXT_PUBLIC_` prefix for client-side Firebase config
+   - Never expose admin credentials on the frontend
+   - Implement proper security rules in Firebase Console for Firestore and Storage
 
-API documentation is available at:
+3. CORS:
+   - Ensure your NestJS backend is configured to accept requests from your Next.js frontend domain
 
-- Swagger UI: http://localhost:3000/docs
-- OpenAPI JSON: http://localhost:3000/docs-json
-
-## Development
-
-### Prerequisites
-
-- Bun >= 1.0.0
-- MongoDB >= 5.0
-- Node.js >= 18 (for development tools)
-- Docker (for distributed deployment)
-
-### Running in Development Mode
-
-```bash
-# Start all services in development mode
-bun run start:dev
-
-# Start individual service in development mode
-bun run start:gateway
-```
-
-## Testing
-
-```bash
-# Run unit tests
-bun test
-
-# Run e2e tests
-bun test:e2e
-```
-
-## Future Enhancements
-
-- [ ] Add WebSocket support for real-time updates
-- [ ] Implement caching layer with Redis
-- [x] Implement distributed task scheduling
-- [ ] Implement circuit breakers for external API calls
-- [ ] Add monitoring and alerting
-- [ ] Implement data streaming for large datasets
-- [ ] Add automated deployment pipeline
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a new Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+4. Environment Variables:
+   - Keep backend Firebase admin credentials secure and never expose them
+   - Frontend Firebase config variables are public and safe to expose (they're restricted by Firebase security rules)

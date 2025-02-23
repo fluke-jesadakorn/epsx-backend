@@ -9,7 +9,6 @@
     "start:dev": "nest start --watch"
   },
   "dependencies": {
-    "@app/common": "*",
-    "@nestjs/schedule": "^4.0.0"
+    "@epsx/market": "*"
   }
 }

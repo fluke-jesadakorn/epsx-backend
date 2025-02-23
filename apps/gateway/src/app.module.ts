@@ -1,13 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { MongooseModule } from '@nestjs/mongoose';
 import { TerminusModule } from '@nestjs/terminus';
-import { AiController } from './controllers/ai.controller';
-import { ExchangeController } from './controllers/exchange.controller';
-import { FinancialController } from './controllers/financial.controller';
-import { HealthController } from './controllers/health.controller';
-import { StockController } from './controllers/stock.controller';
+import { FirebaseConfigModule } from './config/firebase.config';
+import { FirebaseService } from './services/firebase.service';
+import { MarketController } from './controllers/market.controller';
 
 @Module({
   imports: [
@@ -15,62 +12,22 @@ import { StockController } from './controllers/stock.controller';
       isGlobal: true,
       envFilePath: ['.env'],
     }),
-    MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGODB_URI'),
-        dbName: configService.get<string>('MONGODB_DB_NAME'),
-      }),
-      inject: [ConfigService],
-    }),
+    FirebaseConfigModule,
     ClientsModule.registerAsync([
       {
-        name: 'EXCHANGE_SERVICE',
+        name: 'MARKET_SERVICE',
         imports: [ConfigModule],
         useFactory: (configService: ConfigService) => ({
           transport: Transport.TCP,
           options: {
-            host: configService.get('EXCHANGE_SERVICE_HOST', 'localhost'),
-            port: configService.get('EXCHANGE_SERVICE_PORT', 4100),
-            retryAttempts: 3,
-            retryDelay: 1000,
-            timeout: 5000,
-          },
-        }),
-        inject: [ConfigService],
-      },
-      {
-        name: 'STOCK_SERVICE',
-        imports: [ConfigModule],
-        useFactory: (configService: ConfigService) => ({
-          transport: Transport.TCP,
-          options: {
-            host: configService.get('STOCK_SERVICE_HOST', 'localhost'),
-            port: configService.get('STOCK_SERVICE_PORT', 4200),
-          },
-        }),
-        inject: [ConfigService],
-      },
-      {
-        name: 'FINANCIAL_SERVICE',
-        imports: [ConfigModule],
-        useFactory: (configService: ConfigService) => ({
-          transport: Transport.TCP,
-          options: {
-            host: configService.get('FINANCIAL_SERVICE_HOST', 'localhost'),
-            port: configService.get('FINANCIAL_SERVICE_PORT', 4300),
-          },
-        }),
-        inject: [ConfigService],
-      },
-      {
-        name: 'AI_SERVICE',
-        imports: [ConfigModule],
-        useFactory: (configService: ConfigService) => ({
-          transport: Transport.TCP,
-          options: {
-            host: configService.get('AI_SERVICE_HOST', 'localhost'),
-            port: configService.get('AI_SERVICE_PORT', 4400),
+            host: configService.get('MARKET_SERVICE_HOST', 'localhost'),
+            port: configService.get('MARKET_SERVICE_PORT', 3002),
+            retryAttempts: 5,
+            retryDelay: 3000,
+            timeout: 10000,
+            reconnectDelay: 5000,
+            keepalive: true,
+            keepaliveTimeout: 5000,
           },
         }),
         inject: [ConfigService],
@@ -82,7 +39,13 @@ import { StockController } from './controllers/stock.controller';
           transport: Transport.TCP,
           options: {
             host: configService.get('SCHEDULER_SERVICE_HOST', 'localhost'),
-            port: configService.get('SCHEDULER_SERVICE_PORT', 4500),
+            port: configService.get('SCHEDULER_SERVICE_PORT', 3003),
+            retryAttempts: 5,
+            retryDelay: 3000,
+            timeout: 10000,
+            reconnectDelay: 5000,
+            keepalive: true,
+            keepaliveTimeout: 5000,
           },
         }),
         inject: [ConfigService],
@@ -90,14 +53,8 @@ import { StockController } from './controllers/stock.controller';
     ]),
     TerminusModule,
   ],
-  controllers: [
-    StockController,
-    ExchangeController,
-    AiController,
-    FinancialController,
-    HealthController,
-  ],
-  providers: [],
+  controllers: [MarketController],
+  providers: [FirebaseService],
 })
 export class AppModule {
   // TODO: Add global exception filters
