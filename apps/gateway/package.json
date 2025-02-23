@@ -7,9 +7,6 @@
     "start:dev": "nest start --watch"
   },
   "dependencies": {
-    "@app/common": "*",
-    "@nestjs/swagger": "^11.0.4",
-    "@nestjs/terminus": "^11.0.0",
-    "mongoose": "^8.10.1"
+    "firebase-admin": "^13.1.0"
   }
 }
